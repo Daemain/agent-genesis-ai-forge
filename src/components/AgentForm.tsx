@@ -88,7 +88,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     if (!formData.url) {
       toast({
         title: "Missing Information",
-        description: `Please enter your ${formData.isCompany ? 'company website' : 'LinkedIn profile'} URL.`,
+        description: `Please enter your ${formData.isCompany ? 'company' : 'personal'} URL.`,
         variant: "destructive"
       });
       return;
@@ -102,7 +102,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
         description: "We're creating your AI sales agent now. This might take a minute or two."
       });
       
-      // Call the edge function to scrape the LinkedIn profile and create an agent
+      // Call the edge function to scrape the profile and create an agent
       const { data, error } = await supabase.functions.invoke('scrape-linkedin', {
         body: {
           name: formData.fullName,
@@ -157,6 +157,13 @@ const AgentForm: React.FC<AgentFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
+        {/* Move Personal/Company toggle to the top */}
+        <div className="flex items-center space-x-2 mx-0">
+          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
+          <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
+          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">
@@ -184,20 +191,14 @@ const AgentForm: React.FC<AgentFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 mx-0">
-          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
-          <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
-          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="url">
-            {formData.isCompany ? 'Company LinkedIn URL' : 'LinkedIn Profile URL'}
+            {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'}
           </Label>
           <Input 
             id="url" 
             name="url" 
-            placeholder={formData.isCompany ? 'https://linkedin.com/company/your-company' : 'https://linkedin.com/in/your-profile'} 
+            placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
             value={formData.url} 
             onChange={handleInputChange} 
           />
