@@ -1,23 +1,13 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-
 interface AgentFormProps {
   onFormDataChange: (formData: FormData) => void;
 }
-
 export interface FormData {
   fullName: string;
   email: string;
@@ -26,45 +16,55 @@ export interface FormData {
   useCase: string;
   voiceStyle: string;
 }
-
-const AgentForm: React.FC<AgentFormProps> = ({ onFormDataChange }) => {
-  const { toast } = useToast();
+const AgentForm: React.FC<AgentFormProps> = ({
+  onFormDataChange
+}) => {
+  const {
+    toast
+  } = useToast();
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
     isCompany: false,
     url: '',
     useCase: 'sales',
-    voiceStyle: 'professional',
+    voiceStyle: 'professional'
   });
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const newFormData = { ...formData, [name]: value };
+    const {
+      name,
+      value
+    } = e.target;
+    const newFormData = {
+      ...formData,
+      [name]: value
+    };
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
-
   const handleSelectChange = (name: string, value: string) => {
-    const newFormData = { ...formData, [name]: value };
+    const newFormData = {
+      ...formData,
+      [name]: value
+    };
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
-
   const handleToggleChange = (checked: boolean) => {
-    const newFormData = { ...formData, isCompany: checked };
+    const newFormData = {
+      ...formData,
+      isCompany: checked
+    };
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({
       title: "Agent Generation Started",
-      description: "We're creating your AI sales agent now.",
+      description: "We're creating your AI sales agent now."
     });
   };
-
   const handleDemoClick = () => {
     const demoData = {
       fullName: 'Alex Johnson',
@@ -72,50 +72,25 @@ const AgentForm: React.FC<AgentFormProps> = ({ onFormDataChange }) => {
       isCompany: true,
       url: 'https://www.techcompany.com',
       useCase: 'sales',
-      voiceStyle: 'professional',
+      voiceStyle: 'professional'
     };
     setFormData(demoData);
     onFormDataChange(demoData);
     toast({
       title: "Demo Agent Loaded",
-      description: "We've loaded a sample AI agent for you to try.",
+      description: "We've loaded a sample AI agent for you to try."
     });
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  return <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              name="fullName"
-              placeholder="Your name"
-              value={formData.fullName}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
-            />
-          </div>
+          
+          
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 mx-0">
           <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
-          <Switch 
-            id="isCompany" 
-            checked={formData.isCompany} 
-            onCheckedChange={handleToggleChange} 
-          />
+          <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
           <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
         </div>
 
@@ -123,19 +98,13 @@ const AgentForm: React.FC<AgentFormProps> = ({ onFormDataChange }) => {
           <Label htmlFor="url">
             {formData.isCompany ? 'Company Website URL' : 'LinkedIn Profile URL'}
           </Label>
-          <Input
-            id="url"
-            name="url"
-            placeholder={formData.isCompany ? 'https://yourcompany.com' : 'https://linkedin.com/in/yourprofile'}
-            value={formData.url}
-            onChange={handleInputChange}
-          />
+          <Input id="url" name="url" placeholder={formData.isCompany ? 'https://yourcompany.com' : 'https://linkedin.com/in/yourprofile'} value={formData.url} onChange={handleInputChange} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="useCase">Use Case</Label>
-            <Select value={formData.useCase} onValueChange={(value) => handleSelectChange('useCase', value)}>
+            <Select value={formData.useCase} onValueChange={value => handleSelectChange('useCase', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a use case" />
               </SelectTrigger>
@@ -151,7 +120,7 @@ const AgentForm: React.FC<AgentFormProps> = ({ onFormDataChange }) => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="voiceStyle">Voice Style</Label>
-            <Select value={formData.voiceStyle} onValueChange={(value) => handleSelectChange('voiceStyle', value)}>
+            <Select value={formData.voiceStyle} onValueChange={value => handleSelectChange('voiceStyle', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a voice style" />
               </SelectTrigger>
@@ -172,17 +141,10 @@ const AgentForm: React.FC<AgentFormProps> = ({ onFormDataChange }) => {
         <Button type="submit" className="w-full bg-agent-gradient hover:opacity-90">
           Generate My AI Agent
         </Button>
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5"
-          onClick={handleDemoClick}
-        >
+        <Button type="button" variant="outline" className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" onClick={handleDemoClick}>
           Try a Demo Agent
         </Button>
       </div>
-    </form>
-  );
+    </form>;
 };
-
 export default AgentForm;
