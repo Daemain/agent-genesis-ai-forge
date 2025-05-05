@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                // Custom colors for our AI Agent Generator
+                agent: {
+                    blue: '#3652E7',
+                    purple: '#7B4AE2',
+                    'light-purple': '#A76AF8',
+                    'dark-blue': '#1E293B',
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,12 +92,21 @@ export default {
 					to: {
 						height: '0'
 					}
-				}
+				},
+                'pulse-slow': {
+                    '0%, 100%': { opacity: '1' },
+                    '50%': { opacity: '0.7' }
+                }
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+                'pulse-slow': 'pulse-slow 3s infinite'
+			},
+            backgroundImage: {
+                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                'agent-gradient': 'linear-gradient(90deg, #3652E7 0%, #8A63E8 50%, #A76AF8 100%)'
+            }
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

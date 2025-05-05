@@ -1,12 +1,94 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import AgentForm, { FormData } from '@/components/AgentForm';
+import PreviewPanel from '@/components/PreviewPanel';
 
 const Index = () => {
+  const [formData, setFormData] = useState<FormData>({
+    fullName: '',
+    email: '',
+    isCompany: false,
+    url: '',
+    useCase: 'sales',
+    voiceStyle: 'professional',
+  });
+
+  const handleFormDataChange = (data: FormData) => {
+    setFormData(data);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid -z-10"></div>
+      <Header />
+      
+      <main className="flex-1 w-full px-4 md:px-8 py-12">
+        <div className="container max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-block mb-2">
+              <span className="bg-agent-blue/10 text-agent-blue text-xs font-medium px-3 py-1 rounded-full">
+                AI-POWERED SALES AGENTS
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-agent-gradient animate-pulse-slow">
+              Create Your AI Sales Agent in 2 Minutes
+            </h1>
+            <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+              Paste your profile or website link — we'll do the rest.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
+            <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg">
+              <AgentForm onFormDataChange={handleFormDataChange} />
+            </div>
+            
+            <div className="hidden lg:block">
+              <PreviewPanel formData={formData} />
+            </div>
+          </div>
+          
+          <div className="lg:hidden mt-8">
+            <PreviewPanel formData={formData} />
+          </div>
+          
+          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div className="p-6 rounded-xl bg-white shadow-md">
+              <div className="w-12 h-12 bg-agent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-agent-blue font-semibold">1</span>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Submit Your Info</h3>
+              <p className="text-gray-500 text-sm">
+                Enter your LinkedIn profile or company website URL and we'll analyze it
+              </p>
+            </div>
+            
+            <div className="p-6 rounded-xl bg-white shadow-md">
+              <div className="w-12 h-12 bg-agent-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-agent-purple font-semibold">2</span>
+              </div>
+              <h3 className="text-lg font-medium mb-2">AI Creates Your Agent</h3>
+              <p className="text-gray-500 text-sm">
+                Our AI builds a custom agent with your tone, knowledge, and expertise
+              </p>
+            </div>
+            
+            <div className="p-6 rounded-xl bg-white shadow-md">
+              <div className="w-12 h-12 bg-agent-light-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-agent-light-purple font-semibold">3</span>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Start Connecting</h3>
+              <p className="text-gray-500 text-sm">
+                Deploy your AI agent to engage with leads, qualify prospects, or support customers
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };
