@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
 interface AgentFormProps {
   onFormDataChange: (formData: FormData) => void;
 }
+
 export interface FormData {
   fullName: string;
   email: string;
@@ -16,12 +20,12 @@ export interface FormData {
   useCase: string;
   voiceStyle: string;
 }
+
 const AgentForm: React.FC<AgentFormProps> = ({
   onFormDataChange
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
@@ -30,11 +34,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
     useCase: 'sales',
     voiceStyle: 'professional'
   });
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {
-      name,
-      value
-    } = e.target;
+    const { name, value } = e.target;
     const newFormData = {
       ...formData,
       [name]: value
@@ -42,6 +44,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+
   const handleSelectChange = (name: string, value: string) => {
     const newFormData = {
       ...formData,
@@ -50,6 +53,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+
   const handleToggleChange = (checked: boolean) => {
     const newFormData = {
       ...formData,
@@ -58,19 +62,87 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Agent Generation Started",
-      description: "We're creating your AI sales agent now."
-    });
+    
+    // Validate form
+    if (!formData.fullName) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter your full name or company name.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!formData.email) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter your email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!formData.url) {
+      toast({
+        title: "Missing Information",
+        description: `Please enter your ${formData.isCompany ? 'company website' : 'LinkedIn profile'} URL.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      toast({
+        title: "Agent Generation Started",
+        description: "We're creating your AI sales agent now. This might take a minute or two."
+      });
+      
+      // Call the edge function to scrape the LinkedIn profile and create an agent
+      const { data, error } = await supabase.functions.invoke('scrape-linkedin', {
+        body: {
+          name: formData.fullName,
+          email: formData.email,
+          isCompany: formData.isCompany,
+          url: formData.url,
+          useCase: formData.useCase,
+          voiceStyle: formData.voiceStyle
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Success!",
+        description: "Your AI agent has been created successfully."
+      });
+      
+      console.log("Agent created:", data);
+      
+    } catch (error) {
+      console.error("Error creating agent:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem creating your AI agent. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
   const handleDemoClick = () => {
     const demoData = {
       fullName: 'Alex Johnson',
       email: 'alex@techcompany.com',
       isCompany: true,
-      url: 'https://www.techcompany.com',
+      url: 'https://www.linkedin.com/company/tech-innovations',
       useCase: 'sales',
       voiceStyle: 'professional'
     };
@@ -81,11 +153,35 @@ const AgentForm: React.FC<AgentFormProps> = ({
       description: "We've loaded a sample AI agent for you to try."
     });
   };
-  return <form onSubmit={handleSubmit} className="space-y-6">
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">
+              {formData.isCompany ? 'Company Name' : 'Full Name'}
+            </Label>
+            <Input 
+              id="fullName" 
+              name="fullName" 
+              placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
+              value={formData.fullName} 
+              onChange={handleInputChange} 
+            />
+          </div>
           
-          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input 
+              id="email" 
+              name="email" 
+              type="email" 
+              placeholder="you@example.com" 
+              value={formData.email} 
+              onChange={handleInputChange} 
+            />
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 mx-0">
@@ -96,9 +192,15 @@ const AgentForm: React.FC<AgentFormProps> = ({
 
         <div className="space-y-2">
           <Label htmlFor="url">
-            {formData.isCompany ? 'Company Website URL' : 'LinkedIn Profile URL'}
+            {formData.isCompany ? 'Company LinkedIn URL' : 'LinkedIn Profile URL'}
           </Label>
-          <Input id="url" name="url" placeholder={formData.isCompany ? 'https://yourcompany.com' : 'https://linkedin.com/in/yourprofile'} value={formData.url} onChange={handleInputChange} />
+          <Input 
+            id="url" 
+            name="url" 
+            placeholder={formData.isCompany ? 'https://linkedin.com/company/your-company' : 'https://linkedin.com/in/your-profile'} 
+            value={formData.url} 
+            onChange={handleInputChange} 
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,13 +240,25 @@ const AgentForm: React.FC<AgentFormProps> = ({
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button type="submit" className="w-full bg-agent-gradient hover:opacity-90">
-          Generate My AI Agent
+        <Button 
+          type="submit" 
+          className="w-full bg-agent-gradient hover:opacity-90"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Generating...' : 'Generate My AI Agent'}
         </Button>
-        <Button type="button" variant="outline" className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" onClick={handleDemoClick}>
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" 
+          onClick={handleDemoClick}
+          disabled={isSubmitting}
+        >
           Try a Demo Agent
         </Button>
       </div>
-    </form>;
+    </form>
+  );
 };
+
 export default AgentForm;

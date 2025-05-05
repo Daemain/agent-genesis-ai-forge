@@ -9,7 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          agent_prompt: string | null
+          created_at: string | null
+          eleven_labs_agent_id: string | null
+          email: string
+          id: string
+          is_company: boolean | null
+          knowledge_base: string | null
+          name: string
+          scraped_data: Json | null
+          updated_at: string | null
+          url: string | null
+          use_case: string | null
+          user_id: string | null
+          voice_style: string | null
+        }
+        Insert: {
+          agent_prompt?: string | null
+          created_at?: string | null
+          eleven_labs_agent_id?: string | null
+          email: string
+          id?: string
+          is_company?: boolean | null
+          knowledge_base?: string | null
+          name: string
+          scraped_data?: Json | null
+          updated_at?: string | null
+          url?: string | null
+          use_case?: string | null
+          user_id?: string | null
+          voice_style?: string | null
+        }
+        Update: {
+          agent_prompt?: string | null
+          created_at?: string | null
+          eleven_labs_agent_id?: string | null
+          email?: string
+          id?: string
+          is_company?: boolean | null
+          knowledge_base?: string | null
+          name?: string
+          scraped_data?: Json | null
+          updated_at?: string | null
+          url?: string | null
+          use_case?: string | null
+          user_id?: string | null
+          voice_style?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
