@@ -88,9 +88,9 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
         ];
       case 'customer-support':
         return [
-          { speaker: 'User', message: 'I'm having trouble with my account' },
+          { speaker: 'User', message: "I'm having trouble with my account" },
           { speaker: 'Agent', message: `I'm sorry to hear that. Let me help you resolve this issue. Could you please tell me more about what's happening?` },
-          { speaker: 'User', message: 'I can't log in with my password' },
+          { speaker: 'User', message: "I can't log in with my password" },
           { speaker: 'Agent', message: 'I understand how frustrating that can be. Let me help you reset your password or would you like me to connect you with our support team?' }
         ];
       default:
