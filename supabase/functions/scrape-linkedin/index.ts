@@ -41,10 +41,10 @@ serve(async (req) => {
     const profileData = structuredData || await simulateScraping(url, isCompany);
     
     // Generate agent content based on structured data
-    const { agentPrompt, knowledgeBase, conversationFlow } = await generateAgentContent(profileData, useCase, name);
+    const { systemPrompt, knowledgeBase, conversationFlow } = await generateAgentContent(profileData, useCase, name, isCompany);
     
     // Create voice agent with ElevenLabs
-    const elevenlabsAgentId = await createElevenLabsAgent(name, agentPrompt, voiceStyle, conversationFlow);
+    const elevenlabsAgentId = await createElevenLabsAgent(name, systemPrompt, voiceStyle, conversationFlow);
     
     // Store in database
     const { data, error } = await supabase
@@ -57,7 +57,7 @@ serve(async (req) => {
         use_case: useCase,
         voice_style: voiceStyle,
         scraped_data: profileData,
-        agent_prompt: agentPrompt,
+        agent_prompt: systemPrompt,
         knowledge_base: knowledgeBase,
         conversation_flow: conversationFlow,
         eleven_labs_agent_id: elevenlabsAgentId,
@@ -161,108 +161,160 @@ async function simulateScraping(url: string, isCompany: boolean) {
   }
 }
 
-// Generate agent content using DeepSeek API
-async function generateAgentContent(profileData: any, useCase: string, name: string) {
-  console.log("Generating agent content with DeepSeek AI");
+// Generate agent content with customized system prompts and knowledge base
+async function generateAgentContent(profileData: any, useCase: string, name: string, isCompany: boolean) {
+  console.log("Generating agent content with customized templates");
   
-  // Create prompt based on scraped data and use case
-  const systemPrompt = `You are an AI assistant that creates sales agent prompts and conversation flows based on profile data.
-  Create a detailed prompt and conversation flow for an AI voice agent that will act as a ${useCase} assistant for the following entity:
-  ${JSON.stringify(profileData, null, 2)}
+  let systemPrompt = "";
+  let knowledgeBase = {};
   
-  Your response should include:
-  1. A detailed agent prompt that explains how the AI should behave and respond
-  2. A knowledge base of factual information about the entity that the AI can use
-  3. A conversation flow with sample dialogues for common scenarios
-  
-  Format your response as a valid JSON object with three keys: "agentPrompt", "knowledgeBase", and "conversationFlow"
-  
-  The conversationFlow should include various conversation scenarios with natural-sounding responses that include pauses (use commas and ellipses) and emphasis (use CAPS for emphasized words) to guide the voice synthesis.
-  
-  Each scenario in conversationFlow should end with an appropriate call-to-action like scheduling a call or visiting the website.`;
-  
-  try {
-    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: `Create a ${useCase} AI voice agent for the profile I've provided. Make it sound natural and conversational with appropriate pauses and emphasis.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+  // Generate system prompt based on the template and scraped data
+  if (isCompany) {
+    // Company template
+    const companyProfile = profileData.companyProfile || {};
+    const companyName = companyProfile.name || name;
+    const industry = companyProfile.industriesServed?.[0] || "technology";
+    const tone = companyProfile.toneOfVoice || "professional, friendly, helpful";
     
-    const data = await response.json();
+    systemPrompt = `You are an AI voice agent representing ${companyName}, a business that specializes in ${industry}.
+
+Your goal is to introduce the company, explain its services/products, answer client inquiries, and direct people to the right resource.
+
+Your tone is ${tone}, and you speak clearly and confidently about the company's:
+- Mission and values
+- Products or services
+- Client success stories
+- How to get started or speak to a real person
+
+When uncertain, answer generally or offer to connect the user to support or sales.`;
+
+    // Generate knowledge base in JSON format
+    knowledgeBase = {
+      company_name: companyName,
+      industry: industry,
+      summary: companyProfile.about || `${companyName} provides innovative solutions in the ${industry} industry.`,
+      products: companyProfile.productsServices?.map((p: any) => p.name) || ["Products and services"],
+      ideal_clients: companyProfile.industriesServed || ["Businesses"],
+      case_study: "We have helped numerous clients achieve their goals through our innovative solutions.",
+      website: companyProfile.contactInfo?.website || url,
+      contact: companyProfile.contactInfo?.email || "contact@example.com"
+    };
+  } else {
+    // Individual template
+    const individualProfile = profileData.individualProfile || {};
+    const fullName = individualProfile.name || name;
+    const profession = individualProfile.title || "Professional";
+    const skills = individualProfile.coreSkills || ["Professional skills"];
+    const tone = individualProfile.toneOfVoice || "friendly, professional";
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Unexpected DeepSeek API response:", data);
-      throw new Error("Failed to generate agent content");
-    }
-    
-    // Parse the response to extract the JSON content
-    const content = data.choices[0].message.content;
-    
-    // Try to extract JSON from the response even if it's wrapped in markdown code blocks
-    try {
-      // Remove markdown code blocks if present
-      const jsonContent = content.replace(/```(json)?\n?|\n?```/g, '');
-      const parsedContent = JSON.parse(jsonContent);
-      return {
-        agentPrompt: parsedContent.agentPrompt || `Default ${useCase} agent prompt for ${name}`,
-        knowledgeBase: parsedContent.knowledgeBase || `Basic facts about ${name}`,
-        conversationFlow: parsedContent.conversationFlow || [
-          {
-            scenario: "Introduction",
-            responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
-          }
-        ]
-      };
-    } catch (error) {
-      console.error("Error parsing DeepSeek response:", error);
-      console.log("Response content:", content);
-      
-      // Fallback response if JSON parsing fails
-      return {
-        agentPrompt: `Default ${useCase} agent prompt for ${name}`,
-        knowledgeBase: `Basic facts about ${name} based on provided profile`,
-        conversationFlow: [
-          {
-            scenario: "Introduction",
-            responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
-          },
-          {
-            scenario: "Services",
-            responses: [`${name} offers various services to help with your business needs. Would you like to schedule a call to learn more?`]
-          }
-        ]
-      };
-    }
-  } catch (error) {
-    console.error("Error calling DeepSeek API:", error);
-    return {
-      agentPrompt: `Default ${useCase} agent prompt based on provided profile.`,
-      knowledgeBase: `Basic facts about the entity: ${JSON.stringify(profileData, null, 2)}`,
-      conversationFlow: [
-        {
-          scenario: "Introduction",
-          responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
-        }
-      ]
+    systemPrompt = `You are an AI voice assistant representing ${fullName}, a ${profession} with expertise in ${skills.join(", ")}.
+
+Your goal is to explain their background, services, and value clearly and confidently. Your personality is ${tone}, and your responses should reflect ${fullName}'s tone, achievements, and personal brand.
+
+You answer questions about ${fullName}'s:
+- Work experience
+- Skills and achievements
+- Projects or clients
+- Availability or how to get in touch
+
+If the question is unrelated, respond politely or guide the person back to relevant topics. Offer to share links or book a meeting when appropriate.`;
+
+    // Generate knowledge base in JSON format
+    knowledgeBase = {
+      name: fullName,
+      title: profession,
+      summary: individualProfile.about || `${fullName} is a ${profession} with expertise in ${skills.join(", ")}.`,
+      top_skills: skills,
+      clients: individualProfile.servicesOffered || ["Clients"],
+      portfolio_url: individualProfile.contact?.website || "personal-website.com",
+      contact: individualProfile.contact?.email || "contact@example.com"
     };
   }
+  
+  // Generate conversation flow based on the system prompt and knowledge base
+  const conversationFlow = generateConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+  
+  return {
+    systemPrompt,
+    knowledgeBase: JSON.stringify(knowledgeBase, null, 2),
+    conversationFlow
+  };
+}
+
+// Generate conversation flow based on system prompt and knowledge base
+function generateConversationFlow(systemPrompt: string, knowledgeBase: any, isCompany: boolean, useCase: string) {
+  const name = isCompany ? knowledgeBase.company_name : knowledgeBase.name;
+  
+  // Base conversation flow for all use cases
+  const baseConversation = [
+    {
+      scenario: "Introduction",
+      responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
+    }
+  ];
+  
+  // Add use-case specific conversation flows
+  let additionalFlows = [];
+  
+  if (useCase === 'sales') {
+    additionalFlows = [
+      {
+        scenario: "Products/Services",
+        responses: [
+          isCompany 
+            ? `At ${knowledgeBase.company_name}, we offer a range of solutions including ${(knowledgeBase.products || []).join(", ")}. Would you like to learn more about any specific one?` 
+            : `${knowledgeBase.name} specializes in ${(knowledgeBase.top_skills || []).join(", ")}. Would you like to hear more about these services?`
+        ]
+      },
+      {
+        scenario: "Pricing",
+        responses: [
+          `Our pricing is customized based on your specific requirements. Would you like to schedule a consultation to discuss your needs?`
+        ]
+      },
+      {
+        scenario: "Call to Action",
+        responses: [
+          `Would you like to schedule a call to discuss how we can help you?`,
+          `What's the best way to reach you so we can provide more detailed information?`
+        ]
+      }
+    ];
+  } else if (useCase === 'customer-support') {
+    additionalFlows = [
+      {
+        scenario: "Issue Troubleshooting",
+        responses: [
+          `I'm sorry to hear you're having an issue. Could you please tell me more about what's happening so I can help you better?`
+        ]
+      },
+      {
+        scenario: "Follow-up",
+        responses: [
+          `Let me connect you with our support team who can help resolve this right away.`,
+          `Would you like me to have someone from our team contact you directly?`
+        ]
+      }
+    ];
+  } else if (useCase === 'lead-qualification') {
+    additionalFlows = [
+      {
+        scenario: "Qualification",
+        responses: [
+          `To help understand if we're a good fit, may I ask about your current needs and challenges?`
+        ]
+      },
+      {
+        scenario: "Next Steps",
+        responses: [
+          `Based on what you've shared, I think we could definitely help. Would you be interested in speaking with one of our specialists?`,
+          `It sounds like you could benefit from our services. Would you like to schedule a demo?`
+        ]
+      }
+    ];
+  }
+  
+  return [...baseConversation, ...additionalFlows];
 }
 
 // Create voice agent with ElevenLabs
