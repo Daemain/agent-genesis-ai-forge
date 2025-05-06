@@ -79,7 +79,7 @@ async function extractStructuredInformation(url: string, isCompany: boolean, nam
           "Healthcare"
         ],
         faqs: [
-          { question: `What does ${name} do?`, answer: `${name} provides AI-powered sales and support automation to help businesses increase revenue and customer satisfaction.` },
+          { question: `What does ${name || 'your company'} do?`, answer: `${name || 'We'} provide AI-powered sales and support automation to help businesses increase revenue and customer satisfaction.` },
           { question: "How do I get started?", answer: "You can schedule a demo through our website or contact our sales team directly." },
           { question: "Can I talk to a real representative?", answer: "Yes, you can schedule a call with one of our sales representatives through our website." }
         ],
@@ -87,7 +87,14 @@ async function extractStructuredInformation(url: string, isCompany: boolean, nam
           website: url,
           scheduleDemo: "#schedule-demo",
           email: email || "contact@company.com"
-        }
+        },
+        conversationStarters: [
+          "Tell me about your AI solutions",
+          "How can you help my business?",
+          "What makes your service different?",
+          "Can you share some success stories?",
+          "What industries do you work with?"
+        ]
       }
     };
   } else {
@@ -115,7 +122,14 @@ async function extractStructuredInformation(url: string, isCompany: boolean, nam
         contact: {
           email: email || "contact@individual.com",
           calendly: "#schedule-meeting"
-        }
+        },
+        conversationStarters: [
+          "What services do you offer?",
+          "Tell me about your experience",
+          "How do you help your clients?",
+          "What makes your approach unique?",
+          "Can we schedule a consultation?"
+        ]
       }
     };
   }

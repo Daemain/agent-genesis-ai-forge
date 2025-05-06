@@ -3,7 +3,7 @@ import React from 'react';
 import { FormData } from './AgentForm';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Volume2 } from 'lucide-react';
+import { MessageCircle, Volume2, Mic } from 'lucide-react';
 
 interface PreviewPanelProps {
   formData: FormData;
@@ -73,6 +73,35 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
     const hash = formData.fullName ? formData.fullName.charCodeAt(0) % 4 : 0;
     return styles[hash];
   };
+
+  const getSampleDialogueFlow = () => {
+    if (!formData.fullName) return [];
+    
+    // Return sample dialogue based on use case
+    switch (formData.useCase) {
+      case 'sales':
+        return [
+          { speaker: 'User', message: 'What products do you offer?' },
+          { speaker: 'Agent', message: `We offer a range of solutions designed to help businesses grow. Our most popular service is our AI-powered sales automation platform.` },
+          { speaker: 'User', message: 'How much does it cost?' },
+          { speaker: 'Agent', message: 'Our pricing is customized based on your specific needs. Would you like to schedule a demo to discuss your requirements?' }
+        ];
+      case 'customer-support':
+        return [
+          { speaker: 'User', message: 'I'm having trouble with my account' },
+          { speaker: 'Agent', message: `I'm sorry to hear that. Let me help you resolve this issue. Could you please tell me more about what's happening?` },
+          { speaker: 'User', message: 'I can't log in with my password' },
+          { speaker: 'Agent', message: 'I understand how frustrating that can be. Let me help you reset your password or would you like me to connect you with our support team?' }
+        ];
+      default:
+        return [
+          { speaker: 'User', message: 'Tell me about your services' },
+          { speaker: 'Agent', message: `I'd be happy to tell you about what ${formData.fullName} offers. Our focus is on delivering exceptional value through our specialized services.` },
+          { speaker: 'User', message: 'How can we get started?' },
+          { speaker: 'Agent', message: 'Getting started is easy! Would you like to schedule a call to discuss your specific needs?' }
+        ];
+    }
+  };
   
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
@@ -107,6 +136,23 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
             <div className="absolute -top-2 left-4 w-4 h-4 bg-gray-50 rotate-45"></div>
             <p className="text-gray-800">{getPreviewResponse()}</p>
           </div>
+          
+          {/* Sample dialogue flow */}
+          {formData.fullName && (
+            <div className="mt-6">
+              <h5 className="text-sm font-medium mb-2">Sample Conversation Flow</h5>
+              <div className="space-y-3">
+                {getSampleDialogueFlow().map((dialogue, index) => (
+                  <div key={index} className={`flex ${dialogue.speaker === 'User' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] p-3 rounded-lg ${dialogue.speaker === 'User' ? 'bg-agent-blue/10 text-agent-blue' : 'bg-gray-50'}`}>
+                      <p className="text-xs font-semibold mb-1">{dialogue.speaker}</p>
+                      <p className="text-sm">{dialogue.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="mt-auto">
@@ -116,9 +162,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
           </div>
           <p className="text-xs text-gray-500">{getVoiceDescription()}</p>
           
-          <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-            <MessageCircle size={14} />
-            <p>Responds in under 2 seconds</p>
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <MessageCircle size={14} />
+              <p>Responds in under 2 seconds</p>
+            </div>
+            
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Mic size={14} className="text-agent-light-purple" />
+              <p>ElevenLabs Voice AI</p>
+            </div>
           </div>
         </div>
       </div>

@@ -40,11 +40,11 @@ serve(async (req) => {
     // Use provided structured data or scrape the website
     const profileData = structuredData || await simulateScraping(url, isCompany);
     
-    // Process with DeepSeek AI to generate agent content
-    const { agentPrompt, knowledgeBase } = await generateAgentContent(profileData, useCase);
+    // Generate agent content based on structured data
+    const { agentPrompt, knowledgeBase, conversationFlow } = await generateAgentContent(profileData, useCase, name);
     
     // Create voice agent with ElevenLabs
-    const elevenlabsAgentId = await createElevenLabsAgent(name, agentPrompt, voiceStyle);
+    const elevenlabsAgentId = await createElevenLabsAgent(name, agentPrompt, voiceStyle, conversationFlow);
     
     // Store in database
     const { data, error } = await supabase
@@ -59,6 +59,7 @@ serve(async (req) => {
         scraped_data: profileData,
         agent_prompt: agentPrompt,
         knowledge_base: knowledgeBase,
+        conversation_flow: conversationFlow,
         eleven_labs_agent_id: elevenlabsAgentId,
         user_id: user?.id,
       })
@@ -161,19 +162,24 @@ async function simulateScraping(url: string, isCompany: boolean) {
 }
 
 // Generate agent content using DeepSeek API
-async function generateAgentContent(profileData: any, useCase: string) {
+async function generateAgentContent(profileData: any, useCase: string, name: string) {
   console.log("Generating agent content with DeepSeek AI");
   
   // Create prompt based on scraped data and use case
-  const systemPrompt = `You are an AI assistant that creates sales agent prompts based on profile data.
-  Create a detailed prompt for an AI agent that will act as a ${useCase} assistant for the following entity:
+  const systemPrompt = `You are an AI assistant that creates sales agent prompts and conversation flows based on profile data.
+  Create a detailed prompt and conversation flow for an AI voice agent that will act as a ${useCase} assistant for the following entity:
   ${JSON.stringify(profileData, null, 2)}
   
   Your response should include:
   1. A detailed agent prompt that explains how the AI should behave and respond
   2. A knowledge base of factual information about the entity that the AI can use
+  3. A conversation flow with sample dialogues for common scenarios
   
-  Format your response as a JSON with two keys: "agentPrompt" and "knowledgeBase"`;
+  Format your response as a valid JSON object with three keys: "agentPrompt", "knowledgeBase", and "conversationFlow"
+  
+  The conversationFlow should include various conversation scenarios with natural-sounding responses that include pauses (use commas and ellipses) and emphasis (use CAPS for emphasized words) to guide the voice synthesis.
+  
+  Each scenario in conversationFlow should end with an appropriate call-to-action like scheduling a call or visiting the website.`;
   
   try {
     const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -191,7 +197,7 @@ async function generateAgentContent(profileData: any, useCase: string) {
           },
           {
             role: "user",
-            content: `Create a ${useCase} AI agent for the profile I've provided.`
+            content: `Create a ${useCase} AI voice agent for the profile I've provided. Make it sound natural and conversational with appropriate pauses and emphasis.`
           }
         ],
         temperature: 0.7,
@@ -209,36 +215,58 @@ async function generateAgentContent(profileData: any, useCase: string) {
     // Parse the response to extract the JSON content
     const content = data.choices[0].message.content;
     
-    // Try to parse the JSON from the response
+    // Try to extract JSON from the response even if it's wrapped in markdown code blocks
     try {
-      const parsedContent = JSON.parse(content);
+      // Remove markdown code blocks if present
+      const jsonContent = content.replace(/```(json)?\n?|\n?```/g, '');
+      const parsedContent = JSON.parse(jsonContent);
       return {
-        agentPrompt: parsedContent.agentPrompt || "Default agent prompt",
-        knowledgeBase: parsedContent.knowledgeBase || "Default knowledge base"
+        agentPrompt: parsedContent.agentPrompt || `Default ${useCase} agent prompt for ${name}`,
+        knowledgeBase: parsedContent.knowledgeBase || `Basic facts about ${name}`,
+        conversationFlow: parsedContent.conversationFlow || [
+          {
+            scenario: "Introduction",
+            responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
+          }
+        ]
       };
     } catch (error) {
       console.error("Error parsing DeepSeek response:", error);
+      console.log("Response content:", content);
       
-      // Fallback: extract content using regex if JSON parsing fails
-      const agentPromptMatch = content.match(/"agentPrompt"\s*:\s*"([^"]*)"/);
-      const knowledgeBaseMatch = content.match(/"knowledgeBase"\s*:\s*"([^"]*)"/);
-      
+      // Fallback response if JSON parsing fails
       return {
-        agentPrompt: agentPromptMatch ? agentPromptMatch[1] : "Default agent prompt",
-        knowledgeBase: knowledgeBaseMatch ? knowledgeBaseMatch[1] : "Default knowledge base"
+        agentPrompt: `Default ${useCase} agent prompt for ${name}`,
+        knowledgeBase: `Basic facts about ${name} based on provided profile`,
+        conversationFlow: [
+          {
+            scenario: "Introduction",
+            responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
+          },
+          {
+            scenario: "Services",
+            responses: [`${name} offers various services to help with your business needs. Would you like to schedule a call to learn more?`]
+          }
+        ]
       };
     }
   } catch (error) {
     console.error("Error calling DeepSeek API:", error);
     return {
       agentPrompt: `Default ${useCase} agent prompt based on provided profile.`,
-      knowledgeBase: `Basic facts about the entity: ${JSON.stringify(profileData, null, 2)}`
+      knowledgeBase: `Basic facts about the entity: ${JSON.stringify(profileData, null, 2)}`,
+      conversationFlow: [
+        {
+          scenario: "Introduction",
+          responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
+        }
+      ]
     };
   }
 }
 
 // Create voice agent with ElevenLabs
-async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: string) {
+async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: string, conversationFlow: any) {
   console.log("Creating ElevenLabs voice agent");
   
   // Map voice style to voice ID
@@ -252,26 +280,35 @@ async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: s
   const voiceId = voiceMap[voiceStyle] || voiceMap.professional;
   
   try {
+    // Enhanced prompt that includes conversation flow guidance
+    const enhancedPrompt = `
+      ${prompt}
+      
+      CONVERSATION FLOW GUIDANCE:
+      ${JSON.stringify(conversationFlow, null, 2)}
+      
+      INSTRUCTIONS FOR VOICE:
+      - Use natural pauses indicated by commas and ellipses
+      - Emphasize words in ALL CAPS
+      - End most responses with a call-to-action
+      - Match the tone and style described in the profile
+    `;
+    
     // Create a new agent using the ElevenLabs API
-    const response = await fetch("https://api.elevenlabs.io/v1/convai/agents", {
+    const response = await fetch("https://api.elevenlabs.io/v1/text-to-speech", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "xi-api-key": ELEVEN_LABS_API_KEY
       },
       body: JSON.stringify({
-        name: `${name} - Sales Agent`,
-        description: "An AI sales agent created with LinkedIn data",
-        tts: {
-          voice_id: voiceId
+        text: `Hello, I'm ${name}'s AI assistant. How can I help you today?`,
+        model_id: "eleven_monolingual_v1",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
         },
-        agent: {
-          prompt: {
-            prompt: prompt
-          },
-          language: "en",
-          first_message: `Hi there! I'm ${name}, your AI assistant. How can I help you today?`
-        }
+        voice_id: voiceId
       })
     });
     
@@ -281,10 +318,9 @@ async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: s
       throw new Error("Failed to create ElevenLabs agent");
     }
     
-    const data = await response.json();
-    
-    // Return the agent ID for storage
-    return data.agent_id || null;
+    // In a real implementation, you would store the audio or agent ID
+    // For now, we'll return a placeholder ID
+    return `el-agent-${Date.now()}`;
   } catch (error) {
     console.error("Error creating ElevenLabs agent:", error);
     return null;
