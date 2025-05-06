@@ -12,6 +12,7 @@ export type Database = {
       agents: {
         Row: {
           agent_prompt: string | null
+          conversation_flow: Json | null
           created_at: string | null
           eleven_labs_agent_id: string | null
           email: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           agent_prompt?: string | null
+          conversation_flow?: Json | null
           created_at?: string | null
           eleven_labs_agent_id?: string | null
           email: string
@@ -44,6 +46,7 @@ export type Database = {
         }
         Update: {
           agent_prompt?: string | null
+          conversation_flow?: Json | null
           created_at?: string | null
           eleven_labs_agent_id?: string | null
           email?: string
