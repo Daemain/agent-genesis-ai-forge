@@ -22,7 +22,7 @@ serve(async (req) => {
 
     // In a real implementation, we'd use a proper scraping service or API
     // For now, we'll extract structured information based on the URL and company type
-    const extractedData = await extractStructuredInformation(url, isCompany, name);
+    const extractedData = await extractStructuredInformation(url, isCompany, name, email);
     
     return new Response(
       JSON.stringify({ 
@@ -46,7 +46,7 @@ serve(async (req) => {
   }
 });
 
-async function extractStructuredInformation(url: string, isCompany: boolean, name: string) {
+async function extractStructuredInformation(url: string, isCompany: boolean, name: string, email: string) {
   console.log(`Extracting structured information for ${isCompany ? 'company' : 'individual'}: ${url}`);
   
   // Check if it's a LinkedIn URL
