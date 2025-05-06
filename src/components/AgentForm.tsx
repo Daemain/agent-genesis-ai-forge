@@ -34,6 +34,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     useCase: 'sales',
     voiceStyle: 'professional'
   });
+  const [structuredData, setStructuredData] = useState<any>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -61,6 +62,74 @@ const AgentForm: React.FC<AgentFormProps> = ({
     };
     setFormData(newFormData);
     onFormDataChange(newFormData);
+  };
+
+  const extractProfileInformation = async () => {
+    if (!formData.url) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a URL to extract profile information.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Extracting Information",
+        description: "Analyzing your profile data..."
+      });
+
+      const { data, error } = await supabase.functions.invoke('extract-profile', {
+        body: {
+          url: formData.url,
+          isCompany: formData.isCompany,
+          name: formData.fullName,
+          email: formData.email
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to extract profile information");
+      }
+
+      setStructuredData(data.data);
+
+      toast({
+        title: "Information Extracted",
+        description: "Profile data has been analyzed successfully."
+      });
+
+      // If name is empty, try to fill it from extracted data
+      if (!formData.fullName) {
+        const extractedName = formData.isCompany 
+          ? data.data.companyProfile?.name 
+          : data.data.individualProfile?.name;
+        
+        if (extractedName) {
+          const newFormData = {
+            ...formData,
+            fullName: extractedName
+          };
+          setFormData(newFormData);
+          onFormDataChange(newFormData);
+        }
+      }
+
+      console.log("Extracted data:", data.data);
+
+    } catch (error) {
+      console.error("Error extracting profile information:", error);
+      toast({
+        title: "Error",
+        description: "Failed to extract profile information. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,7 +179,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
           isCompany: formData.isCompany,
           url: formData.url,
           useCase: formData.useCase,
-          voiceStyle: formData.voiceStyle
+          voiceStyle: formData.voiceStyle,
+          structuredData: structuredData // Pass along any extracted structured data
         }
       });
       
@@ -195,13 +265,25 @@ const AgentForm: React.FC<AgentFormProps> = ({
           <Label htmlFor="url">
             {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'}
           </Label>
-          <Input 
-            id="url" 
-            name="url" 
-            placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
-            value={formData.url} 
-            onChange={handleInputChange} 
-          />
+          <div className="flex space-x-2">
+            <Input 
+              id="url" 
+              name="url" 
+              placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
+              value={formData.url} 
+              onChange={handleInputChange}
+              className="flex-1"
+            />
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={extractProfileInformation}
+              disabled={!formData.url || isSubmitting}
+              className="whitespace-nowrap"
+            >
+              Extract Info
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -238,6 +320,27 @@ const AgentForm: React.FC<AgentFormProps> = ({
             </Select>
           </div>
         </div>
+
+        {structuredData && (
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
+            <h4 className="text-sm font-medium mb-2">Extracted Profile Information</h4>
+            <div className="text-xs max-h-40 overflow-y-auto">
+              {formData.isCompany ? (
+                <div>
+                  <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.name}</p>
+                  <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline}</p>
+                  <p><span className="font-medium">Products/Services:</span> {structuredData.companyProfile?.productsServices?.map((p: any) => p.name).join(', ')}</p>
+                </div>
+              ) : (
+                <div>
+                  <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.name}</p>
+                  <p><span className="font-medium">Title:</span> {structuredData.individualProfile?.title}</p>
+                  <p><span className="font-medium">Skills:</span> {structuredData.individualProfile?.coreSkills?.join(', ')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

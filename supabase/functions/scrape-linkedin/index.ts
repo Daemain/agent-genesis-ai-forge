@@ -18,10 +18,10 @@ serve(async (req) => {
   }
 
   try {
-    const { url, isCompany, useCase, voiceStyle, name, email } = await req.json();
+    const { url, isCompany, useCase, voiceStyle, name, email, structuredData } = await req.json();
     
     if (!url) {
-      throw new Error("LinkedIn URL is required");
+      throw new Error("URL is required");
     }
 
     // Create Supabase client with auth context from request
@@ -37,16 +37,11 @@ serve(async (req) => {
       data: { user },
     } = await supabase.auth.getUser();
     
-    // Scrape LinkedIn profile
-    console.log("Scraping LinkedIn profile:", url);
-    
-    // In a real implementation, we would use a proper scraping service
-    // For this demo, we'll simulate scraping with a simple fetch
-    // NOTE: LinkedIn blocks most scraping attempts, so this is just for demonstration
-    const scrapedData = await simulateScraping(url, isCompany);
+    // Use provided structured data or scrape the website
+    const profileData = structuredData || await simulateScraping(url, isCompany);
     
     // Process with DeepSeek AI to generate agent content
-    const { agentPrompt, knowledgeBase } = await generateAgentContent(scrapedData, useCase);
+    const { agentPrompt, knowledgeBase } = await generateAgentContent(profileData, useCase);
     
     // Create voice agent with ElevenLabs
     const elevenlabsAgentId = await createElevenLabsAgent(name, agentPrompt, voiceStyle);
@@ -61,7 +56,7 @@ serve(async (req) => {
         url,
         use_case: useCase,
         voice_style: voiceStyle,
-        scraped_data: scrapedData,
+        scraped_data: profileData,
         agent_prompt: agentPrompt,
         knowledge_base: knowledgeBase,
         eleven_labs_agent_id: elevenlabsAgentId,
@@ -104,46 +99,75 @@ async function simulateScraping(url: string, isCompany: boolean) {
   
   if (isCompany) {
     return {
-      name: url.includes('linkedin.com/company/') 
-        ? url.split('linkedin.com/company/')[1].split('/')[0].replace(/-/g, ' ') 
-        : 'Sample Company',
-      description: "A leading provider of innovative solutions in the industry.",
-      about: "This company was founded in 2010 and has been growing steadily since. They focus on delivering high-quality products to their customers and maintaining excellent customer relations.",
-      employees: "50-200 employees",
-      industry: "Technology"
+      companyProfile: {
+        name: url.includes('linkedin.com/company/') 
+          ? url.split('linkedin.com/company/')[1].split('/')[0].replace(/-/g, ' ') 
+          : 'Sample Company',
+        tagline: "A leading provider of innovative solutions in the industry.",
+        toneOfVoice: "Professional, Insightful, Conversational",
+        about: "This company was founded in 2010 and has been growing steadily since. They focus on delivering high-quality products to their customers and maintaining excellent customer relations.",
+        productsServices: [
+          { name: "Product A", description: "A flagship product that does X" },
+          { name: "Service B", description: "A premium service for Y" }
+        ],
+        useCases: [
+          "Enterprise Solutions",
+          "Small Business Support"
+        ],
+        industriesServed: [
+          "Technology",
+          "Finance"
+        ],
+        faqs: [
+          { question: "What do you offer?", answer: "We offer cutting-edge solutions for businesses." },
+          { question: "How do I get started?", answer: "Contact our sales team to schedule a demo." }
+        ],
+        contactInfo: {
+          website: url,
+          email: "contact@company.com"
+        }
+      }
     };
   } else {
     return {
-      name: url.includes('linkedin.com/in/') 
-        ? url.split('linkedin.com/in/')[1].split('/')[0].replace(/-/g, ' ') 
-        : 'John Doe',
-      headline: "Sales Professional | Business Development | Relationship Management",
-      about: "Experienced sales professional with over 5 years in the technology sector. Specializes in building strong client relationships and exceeding sales targets.",
-      experience: [
-        {
-          title: "Sales Manager",
-          company: "Tech Solutions Inc.",
-          duration: "2020 - Present"
-        },
-        {
-          title: "Sales Representative",
-          company: "Digital Innovations Co.",
-          duration: "2018 - 2020"
+      individualProfile: {
+        name: url.includes('linkedin.com/in/') 
+          ? url.split('linkedin.com/in/')[1].split('/')[0].replace(/-/g, ' ') 
+          : 'John Doe',
+        title: "Sales Professional",
+        headline: "Sales Professional | Business Development | Relationship Management",
+        toneOfVoice: "Professional, Friendly, Knowledgeable",
+        about: "Experienced sales professional with over 5 years in the technology sector. Specializes in building strong client relationships and exceeding sales targets.",
+        coreSkills: [
+          "Consultative Selling",
+          "Relationship Building",
+          "Client Management"
+        ],
+        servicesOffered: [
+          "Sales Consulting",
+          "Business Development"
+        ],
+        experienceHighlights: [
+          { title: "Sales Manager", company: "Tech Solutions Inc.", date: "2020 - Present" },
+          { title: "Sales Representative", company: "Digital Innovations Co.", date: "2018 - 2020" }
+        ],
+        education: "Bachelor's in Business Administration",
+        contact: {
+          email: "john@example.com"
         }
-      ],
-      education: "Bachelor's in Business Administration"
+      }
     };
   }
 }
 
 // Generate agent content using DeepSeek API
-async function generateAgentContent(scrapedData: any, useCase: string) {
+async function generateAgentContent(profileData: any, useCase: string) {
   console.log("Generating agent content with DeepSeek AI");
   
   // Create prompt based on scraped data and use case
-  const systemPrompt = `You are an AI assistant that creates sales agent prompts based on LinkedIn profile data.
+  const systemPrompt = `You are an AI assistant that creates sales agent prompts based on profile data.
   Create a detailed prompt for an AI agent that will act as a ${useCase} assistant for the following entity:
-  ${JSON.stringify(scrapedData, null, 2)}
+  ${JSON.stringify(profileData, null, 2)}
   
   Your response should include:
   1. A detailed agent prompt that explains how the AI should behave and respond
@@ -167,7 +191,7 @@ async function generateAgentContent(scrapedData: any, useCase: string) {
           },
           {
             role: "user",
-            content: `Create a ${useCase} AI agent for the LinkedIn profile I've provided.`
+            content: `Create a ${useCase} AI agent for the profile I've provided.`
           }
         ],
         temperature: 0.7,
@@ -208,7 +232,7 @@ async function generateAgentContent(scrapedData: any, useCase: string) {
     console.error("Error calling DeepSeek API:", error);
     return {
       agentPrompt: `Default ${useCase} agent prompt based on provided profile.`,
-      knowledgeBase: `Basic facts about the entity: ${JSON.stringify(scrapedData, null, 2)}`
+      knowledgeBase: `Basic facts about the entity: ${JSON.stringify(profileData, null, 2)}`
     };
   }
 }
@@ -233,7 +257,7 @@ async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: s
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "xi-api-key": ELEVEN_LABS_KEY
+        "xi-api-key": ELEVEN_LABS_API_KEY
       },
       body: JSON.stringify({
         name: `${name} - Sales Agent`,
