@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Volume2 } from 'lucide-react';
+import { Volume2, MessageSquare, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
@@ -21,6 +21,7 @@ interface Agent {
   voice_style: string;
   eleven_labs_agent_id: string | null;
   created_at: string;
+  conversation_flow: any;
 }
 
 const MyAgents = () => {
@@ -95,6 +96,10 @@ const MyAgents = () => {
     }
   };
 
+  const hasConversationFlow = (agent: Agent) => {
+    return agent.conversation_flow && Array.isArray(agent.conversation_flow) && agent.conversation_flow.length > 0;
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid -z-10"></div>
@@ -156,12 +161,28 @@ const MyAgents = () => {
                         <span className="ml-1 capitalize">{agent.voice_style}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{getVoiceDescription(agent.voice_style)}</p>
+                      
+                      {hasConversationFlow(agent) && (
+                        <div className="mt-3 flex items-center text-agent-blue">
+                          <Eye size={16} className="mr-2" />
+                          <span className="text-xs">{agent.conversation_flow.length} conversation scenarios</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
-                  <CardFooter className="border-t pt-4 flex justify-between">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Chat with Agent
-                    </Button>
+                  <CardFooter className="border-t pt-4 grid grid-cols-2 gap-2">
+                    <Link to={`/chat/${agent.id}`} className="w-full">
+                      <Button variant="outline" size="sm" className="w-full">
+                        <MessageSquare size={14} className="mr-2" />
+                        Chat
+                      </Button>
+                    </Link>
+                    <Link to={`/agents/${agent.id}`} className="w-full">
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Eye size={14} className="mr-2" />
+                        Details
+                      </Button>
+                    </Link>
                   </CardFooter>
                 </Card>
               ))}

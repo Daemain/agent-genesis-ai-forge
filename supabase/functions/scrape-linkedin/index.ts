@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -17,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { url, isCompany, useCase, voiceStyle, name, email, structuredData } = await req.json();
+    const { url, isCompany, useCase, voiceStyle, name, email, structuredData, conversationFlow } = await req.json();
     
     if (!url) {
       throw new Error("URL is required");
@@ -39,11 +40,30 @@ serve(async (req) => {
     // Use provided structured data or scrape the website
     const profileData = structuredData || await simulateScraping(url, isCompany);
     
-    // Generate agent content based on structured data
-    const { systemPrompt, knowledgeBase, conversationFlow } = await generateAgentContent(profileData, useCase, name, isCompany);
+    let finalConversationFlow;
+    let systemPrompt;
+    let knowledgeBase;
+    
+    // If conversation flow is provided, use that
+    if (conversationFlow && conversationFlow.length > 0) {
+      console.log("Using provided conversation flow");
+      finalConversationFlow = conversationFlow;
+      
+      // Still generate system prompt and knowledge base
+      const generatedContent = await generateAgentContent(profileData, useCase, name, isCompany);
+      systemPrompt = generatedContent.systemPrompt;
+      knowledgeBase = generatedContent.knowledgeBase;
+    } else {
+      // Generate agent content based on structured data
+      console.log("Generating conversation flow");
+      const generatedContent = await generateAgentContent(profileData, useCase, name, isCompany);
+      systemPrompt = generatedContent.systemPrompt;
+      knowledgeBase = generatedContent.knowledgeBase;
+      finalConversationFlow = generatedContent.conversationFlow;
+    }
     
     // Create voice agent with ElevenLabs
-    const elevenlabsAgentId = await createElevenLabsAgent(name, systemPrompt, voiceStyle, conversationFlow);
+    const elevenlabsAgentId = await createElevenLabsAgent(name, systemPrompt, voiceStyle, finalConversationFlow);
     
     // Store in database
     const { data, error } = await supabase
@@ -58,7 +78,7 @@ serve(async (req) => {
         scraped_data: profileData,
         agent_prompt: systemPrompt,
         knowledge_base: knowledgeBase,
-        conversation_flow: conversationFlow,
+        conversation_flow: finalConversationFlow,
         eleven_labs_agent_id: elevenlabsAgentId,
         user_id: user?.id,
       })
@@ -166,6 +186,7 @@ async function generateAgentContent(profileData: any, useCase: string, name: str
   
   let systemPrompt = "";
   let knowledgeBase = {};
+  let conversationFlow = [];
   
   // Generate system prompt based on the template and scraped data
   if (isCompany) {
@@ -229,9 +250,85 @@ If the question is unrelated, respond politely or guide the person back to relev
       contact: individualProfile.contact?.email || "contact@example.com"
     };
   }
-  
-  // Generate conversation flow based on the system prompt and knowledge base
-  const conversationFlow = generateConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+
+  try {
+    // Try to generate conversation flow using OpenAI
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("OPENAI_API_KEY")}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert AI conversation designer who creates well-structured conversation flows."
+          },
+          {
+            role: "user",
+            content: `
+Create a detailed conversation flow for an AI voice agent based on the following information:
+
+SYSTEM PROMPT:
+${systemPrompt}
+
+KNOWLEDGE BASE:
+${JSON.stringify(knowledgeBase, null, 2)}
+
+AGENT TYPE: ${isCompany ? 'Company' : 'Individual'}
+USE CASE: ${useCase}
+
+Create a comprehensive conversation flow with at least 5 different conversation scenarios that this AI voice agent would handle.
+Each scenario should include:
+1. The scenario name/type (e.g., "Introduction", "Product Questions", "Pricing", etc.)
+2. 2-3 example user inputs/questions for this scenario as "userInputs"
+3. 2-3 diverse AI responses for this scenario as "responses" 
+4. 1-2 follow-up questions the AI might ask as "followUps"
+
+Format your response as a valid JSON array like this example:
+[
+  {
+    "scenario": "Introduction",
+    "userInputs": ["Hi there", "Hello", "Who are you?"],
+    "responses": ["Hi, I'm Sarah's AI assistant. How can I help you today?", "Hello! I'm an AI assistant for ABC Company. How may I assist you?"],
+    "followUps": ["Would you like to learn more about our services?", "Is there something specific I can help you with today?"]
+  }
+]
+
+Make sure the conversation flow is highly personalized to the specific knowledge base and system prompt.
+Return ONLY valid JSON that can be parsed (no explanations or other text).
+            `
+          }
+        ],
+        temperature: 0.7
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      try {
+        // Try to parse the JSON content
+        conversationFlow = JSON.parse(content.trim());
+        console.log("Successfully generated conversation flow with OpenAI");
+      } catch (error) {
+        console.error("Error parsing OpenAI-generated conversation flow:", error);
+        // Fall back to the basic flow
+        conversationFlow = generateConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+      }
+    } else {
+      console.error("Error from OpenAI API:", await response.text());
+      // Fall back to the basic flow
+      conversationFlow = generateConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+    }
+  } catch (error) {
+    console.error("Error generating flow with OpenAI:", error);
+    // Fall back to the basic flow
+    conversationFlow = generateConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+  }
   
   return {
     systemPrompt,
@@ -248,7 +345,9 @@ function generateConversationFlow(systemPrompt: string, knowledgeBase: any, isCo
   const baseConversation = [
     {
       scenario: "Introduction",
-      responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`]
+      userInputs: ["Hi there", "Hello", "Who are you?"],
+      responses: [`Hi, I'm ${name}'s AI assistant. How can I help you today?`],
+      followUps: ["Is there something specific you'd like to know?"]
     }
   ];
   
@@ -259,56 +358,70 @@ function generateConversationFlow(systemPrompt: string, knowledgeBase: any, isCo
     additionalFlows = [
       {
         scenario: "Products/Services",
+        userInputs: ["What do you offer?", "Tell me about your products"],
         responses: [
           isCompany 
             ? `At ${knowledgeBase.company_name}, we offer a range of solutions including ${(knowledgeBase.products || []).join(", ")}. Would you like to learn more about any specific one?` 
             : `${knowledgeBase.name} specializes in ${(knowledgeBase.top_skills || []).join(", ")}. Would you like to hear more about these services?`
-        ]
+        ],
+        followUps: ["Would you like more details on any specific offering?"]
       },
       {
         scenario: "Pricing",
+        userInputs: ["How much does it cost?", "What are your prices?"],
         responses: [
           `Our pricing is customized based on your specific requirements. Would you like to schedule a consultation to discuss your needs?`
-        ]
+        ],
+        followUps: ["What particular service are you interested in?"]
       },
       {
         scenario: "Call to Action",
+        userInputs: ["How do we get started?", "I want to work with you"],
         responses: [
           `Would you like to schedule a call to discuss how we can help you?`,
           `What's the best way to reach you so we can provide more detailed information?`
-        ]
+        ],
+        followUps: ["What's your email address?"]
       }
     ];
   } else if (useCase === 'customer-support') {
     additionalFlows = [
       {
         scenario: "Issue Troubleshooting",
+        userInputs: ["I have a problem", "Something's not working"],
         responses: [
           `I'm sorry to hear you're having an issue. Could you please tell me more about what's happening so I can help you better?`
-        ]
+        ],
+        followUps: ["When did you first notice this issue?"]
       },
       {
         scenario: "Follow-up",
+        userInputs: ["What happens next?", "Will someone contact me?"],
         responses: [
           `Let me connect you with our support team who can help resolve this right away.`,
           `Would you like me to have someone from our team contact you directly?`
-        ]
+        ],
+        followUps: ["What's the best way to reach you?"]
       }
     ];
   } else if (useCase === 'lead-qualification') {
     additionalFlows = [
       {
         scenario: "Qualification",
+        userInputs: ["I'm interested in your services", "I want to know if we're a good fit"],
         responses: [
           `To help understand if we're a good fit, may I ask about your current needs and challenges?`
-        ]
+        ],
+        followUps: ["What specific problems are you trying to solve?"]
       },
       {
         scenario: "Next Steps",
+        userInputs: ["What now?", "How do we proceed?"],
         responses: [
           `Based on what you've shared, I think we could definitely help. Would you be interested in speaking with one of our specialists?`,
           `It sounds like you could benefit from our services. Would you like to schedule a demo?`
-        ]
+        ],
+        followUps: ["What times work best for you?"]
       }
     ];
   }
@@ -331,12 +444,22 @@ async function createElevenLabsAgent(name: string, prompt: string, voiceStyle: s
   const voiceId = voiceMap[voiceStyle] || voiceMap.professional;
   
   try {
+    // Convert conversation flow to a format that's easy for the agent to understand
+    const scenariosForPrompt = conversationFlow.map((scenario: any) => {
+      return {
+        topic: scenario.scenario,
+        user_queries: scenario.userInputs,
+        responses: scenario.responses,
+        follow_ups: scenario.followUps || []
+      };
+    });
+    
     // Enhanced prompt that includes conversation flow guidance
     const enhancedPrompt = `
       ${prompt}
       
       CONVERSATION FLOW GUIDANCE:
-      ${JSON.stringify(conversationFlow, null, 2)}
+      ${JSON.stringify(scenariosForPrompt, null, 2)}
       
       INSTRUCTIONS FOR VOICE:
       - Use natural pauses indicated by commas and ellipses

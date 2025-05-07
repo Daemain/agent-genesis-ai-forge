@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ConversationFlowEditor from "@/components/ConversationFlowEditor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AgentFormProps {
   onFormDataChange: (formData: FormData) => void;
@@ -19,6 +21,13 @@ export interface FormData {
   url: string;
   useCase: string;
   voiceStyle: string;
+}
+
+interface ConversationScenario {
+  scenario: string;
+  userInputs: string[];
+  responses: string[];
+  followUps: string[];
 }
 
 const AgentForm: React.FC<AgentFormProps> = ({
@@ -35,6 +44,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
     voiceStyle: 'professional'
   });
   const [structuredData, setStructuredData] = useState<any>(null);
+  const [conversationFlow, setConversationFlow] = useState<ConversationScenario[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("details");
+  const [flowGenerated, setFlowGenerated] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -98,6 +110,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
       }
 
       setStructuredData(data.data);
+      
+      // Generate conversation flow after extracting profile
+      generateConversationFlow(data.data);
 
       toast({
         title: "Information Extracted",
@@ -127,6 +142,61 @@ const AgentForm: React.FC<AgentFormProps> = ({
       toast({
         title: "Error",
         description: "Failed to extract profile information. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateConversationFlow = async (profileDataToUse?: any) => {
+    try {
+      const dataToUse = profileDataToUse || structuredData;
+      
+      if (!dataToUse) {
+        toast({
+          title: "Missing Information",
+          description: "Please extract profile information first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Generating Flow",
+        description: "Creating a conversation flow based on the profile..."
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-conversation-flow', {
+        body: {
+          profileData: dataToUse,
+          useCase: formData.useCase,
+          name: formData.fullName,
+          isCompany: formData.isCompany,
+          voiceStyle: formData.voiceStyle
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to generate conversation flow");
+      }
+
+      setConversationFlow(data.data.conversationFlow);
+      setFlowGenerated(true);
+      setActiveTab("flow");
+
+      toast({
+        title: "Flow Generated",
+        description: "Conversation flow has been created successfully."
+      });
+
+    } catch (error) {
+      console.error("Error generating conversation flow:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate conversation flow. Please try again.",
         variant: "destructive"
       });
     }
@@ -180,7 +250,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
           url: formData.url,
           useCase: formData.useCase,
           voiceStyle: formData.voiceStyle,
-          structuredData: structuredData // Pass along any extracted structured data
+          structuredData: structuredData, // Pass along any extracted structured data
+          conversationFlow: conversationFlow // Pass the customized conversation flow
         }
       });
       
@@ -218,149 +289,238 @@ const AgentForm: React.FC<AgentFormProps> = ({
     };
     setFormData(demoData);
     onFormDataChange(demoData);
+    
+    // Set demo structured data
+    const demoStructuredData = {
+      companyProfile: {
+        name: "Tech Innovations",
+        tagline: "Building the future of enterprise software",
+        toneOfVoice: "Professional, Innovative, Trustworthy",
+        about: "Tech Innovations was founded in 2015 with the mission to make enterprise software more accessible and user-friendly. We focus on cloud-native solutions that help businesses transform digitally.",
+        productsServices: [
+          { name: "CloudManage", description: "Cloud resource management platform" },
+          { name: "DataSync Pro", description: "Enterprise data synchronization tool" },
+          { name: "SecureBiz", description: "Business security and compliance solution" }
+        ],
+        industriesServed: ["Technology", "Finance", "Healthcare", "Manufacturing"],
+        faqs: [
+          { question: "What makes your solutions different?", answer: "Our solutions are built with user-experience first, ensuring high adoption rates and ROI." },
+          { question: "Do you offer custom implementations?", answer: "Yes, we provide tailored implementations to meet your specific business needs." }
+        ],
+        contactInfo: {
+          website: "https://www.techinnovations.example.com",
+          email: "info@techinnovations.example.com"
+        }
+      }
+    };
+    setStructuredData(demoStructuredData);
+    
+    // Generate conversation flow with demo data
+    generateConversationFlow(demoStructuredData);
+    
     toast({
       title: "Demo Agent Loaded",
       description: "We've loaded a sample AI agent for you to try."
     });
   };
 
+  const handleSaveConversationFlow = (flow: ConversationScenario[]) => {
+    setConversationFlow(flow);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        {/* Move Personal/Company toggle to the top */}
-        <div className="flex items-center space-x-2 mx-0">
-          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
-          <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
-          <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
-        </div>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="details">Agent Details</TabsTrigger>
+          <TabsTrigger value="flow" disabled={!structuredData}>Conversation Flow</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details" className="space-y-4">
+          {/* Move Personal/Company toggle to the top */}
+          <div className="flex items-center space-x-2 mx-0">
+            <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
+            <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
+            <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">
-              {formData.isCompany ? 'Company Name' : 'Full Name'}
-            </Label>
-            <Input 
-              id="fullName" 
-              name="fullName" 
-              placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
-              value={formData.fullName} 
-              onChange={handleInputChange} 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <Input 
-              id="email" 
-              name="email" 
-              type="email" 
-              placeholder="you@example.com" 
-              value={formData.email} 
-              onChange={handleInputChange} 
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="url">
-            {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'}
-          </Label>
-          <div className="flex space-x-2">
-            <Input 
-              id="url" 
-              name="url" 
-              placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
-              value={formData.url} 
-              onChange={handleInputChange}
-              className="flex-1"
-            />
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={extractProfileInformation}
-              disabled={!formData.url || isSubmitting}
-              className="whitespace-nowrap"
-            >
-              Extract Info
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="useCase">Use Case</Label>
-            <Select value={formData.useCase} onValueChange={value => handleSelectChange('useCase', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a use case" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="sales">Sales</SelectItem>
-                  <SelectItem value="customer-support">Customer Support</SelectItem>
-                  <SelectItem value="lead-qualification">Lead Qualification</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="voiceStyle">Voice Style</Label>
-            <Select value={formData.voiceStyle} onValueChange={value => handleSelectChange('voiceStyle', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a voice style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="professional">Professional</SelectItem>
-                  <SelectItem value="energetic">Energetic</SelectItem>
-                  <SelectItem value="calm">Calm</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {structuredData && (
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
-            <h4 className="text-sm font-medium mb-2">Extracted Profile Information</h4>
-            <div className="text-xs max-h-40 overflow-y-auto">
-              {formData.isCompany ? (
-                <div>
-                  <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.name}</p>
-                  <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline}</p>
-                  <p><span className="font-medium">Products/Services:</span> {structuredData.companyProfile?.productsServices?.map((p: any) => p.name).join(', ')}</p>
-                </div>
-              ) : (
-                <div>
-                  <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.name}</p>
-                  <p><span className="font-medium">Title:</span> {structuredData.individualProfile?.title}</p>
-                  <p><span className="font-medium">Skills:</span> {structuredData.individualProfile?.coreSkills?.join(', ')}</p>
-                </div>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">
+                {formData.isCompany ? 'Company Name' : 'Full Name'}
+              </Label>
+              <Input 
+                id="fullName" 
+                name="fullName" 
+                placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
+                value={formData.fullName} 
+                onChange={handleInputChange} 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input 
+                id="email" 
+                name="email" 
+                type="email" 
+                placeholder="you@example.com" 
+                value={formData.email} 
+                onChange={handleInputChange} 
+              />
             </div>
           </div>
-        )}
-      </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Button 
-          type="submit" 
-          className="w-full bg-agent-gradient hover:opacity-90"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Generating...' : 'Generate My AI Agent'}
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" 
-          onClick={handleDemoClick}
-          disabled={isSubmitting}
-        >
-          Try a Demo Agent
-        </Button>
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="url">
+              {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'}
+            </Label>
+            <div className="flex space-x-2">
+              <Input 
+                id="url" 
+                name="url" 
+                placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
+                value={formData.url} 
+                onChange={handleInputChange}
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={extractProfileInformation}
+                disabled={!formData.url || isSubmitting}
+                className="whitespace-nowrap"
+              >
+                Extract Info
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="useCase">Use Case</Label>
+              <Select value={formData.useCase} onValueChange={value => handleSelectChange('useCase', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a use case" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="customer-support">Customer Support</SelectItem>
+                    <SelectItem value="lead-qualification">Lead Qualification</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="voiceStyle">Voice Style</Label>
+              <Select value={formData.voiceStyle} onValueChange={value => handleSelectChange('voiceStyle', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a voice style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="energetic">Energetic</SelectItem>
+                    <SelectItem value="calm">Calm</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {structuredData && (
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
+              <h4 className="text-sm font-medium mb-2">Extracted Profile Information</h4>
+              <div className="text-xs max-h-40 overflow-y-auto">
+                {formData.isCompany ? (
+                  <div>
+                    <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.name}</p>
+                    <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline}</p>
+                    <p><span className="font-medium">Products/Services:</span> {structuredData.companyProfile?.productsServices?.map((p: any) => p.name).join(', ')}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.name}</p>
+                    <p><span className="font-medium">Title:</span> {structuredData.individualProfile?.title}</p>
+                    <p><span className="font-medium">Skills:</span> {structuredData.individualProfile?.coreSkills?.join(', ')}</p>
+                  </div>
+                )}
+              </div>
+              
+              {structuredData && (
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateConversationFlow()}
+                  className="mt-3"
+                >
+                  Generate Conversation Flow
+                </Button>
+              )}
+            </div>
+          )}
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              type="submit" 
+              className="w-full bg-agent-gradient hover:opacity-90"
+              disabled={isSubmitting || !structuredData}
+            >
+              {isSubmitting ? 'Generating...' : 'Generate My AI Agent'}
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" 
+              onClick={handleDemoClick}
+              disabled={isSubmitting}
+            >
+              Try a Demo Agent
+            </Button>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="flow">
+          {structuredData && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Customize Conversation Flow</h3>
+                <div className="text-sm text-gray-500">
+                  {flowGenerated ? "Flow generated successfully" : "Generate a flow to begin"}
+                </div>
+              </div>
+              
+              <ConversationFlowEditor
+                initialFlow={conversationFlow}
+                profileData={structuredData}
+                isCompany={formData.isCompany}
+                useCase={formData.useCase}
+                voiceStyle={formData.voiceStyle}
+                name={formData.fullName}
+                onSave={handleSaveConversationFlow}
+              />
+              
+              <div className="flex justify-end mt-4">
+                <Button
+                  type="submit"
+                  className="bg-agent-gradient hover:opacity-90"
+                  disabled={isSubmitting || conversationFlow.length === 0}
+                >
+                  {isSubmitting ? 'Generating...' : 'Create AI Agent with Custom Flow'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </form>
   );
 };
