@@ -1,24 +1,24 @@
-
 import React from 'react';
 import { FormData } from './AgentForm';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Volume2, Mic } from 'lucide-react';
-
 interface PreviewPanelProps {
   formData: FormData;
 }
-
-const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
+const PreviewPanel: React.FC<PreviewPanelProps> = ({
+  formData
+}) => {
   const getPreviewResponse = () => {
-    const { fullName, isCompany, useCase, voiceStyle } = formData;
-    
+    const {
+      fullName,
+      isCompany,
+      useCase,
+      voiceStyle
+    } = formData;
     if (!fullName) return "Once you fill out the form, you'll see a preview of your AI agent here.";
-    
     const companyOrPerson = isCompany ? "your company" : "you";
-    
     let response = "";
-    
     switch (useCase) {
       case 'sales':
         response = `Hi there! I'm an AI sales assistant for ${fullName}. I can help qualify leads, schedule demos, and answer questions about our products and pricing.`;
@@ -32,10 +32,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
       default:
         response = `Hello! I'm an AI assistant for ${fullName}. I'm here to help with any questions you may have about ${companyOrPerson}.`;
     }
-    
     return response;
   };
-  
   const getVoiceDescription = () => {
     switch (formData.voiceStyle) {
       case 'friendly':
@@ -50,64 +48,70 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
         return "Professional, clear, friendly";
     }
   };
-
   const getInitials = () => {
     if (!formData.fullName) return "AI";
-    return formData.fullName
-      .split(' ')
-      .map(name => name[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
+    return formData.fullName.split(' ').map(name => name[0]).join('').toUpperCase().substring(0, 2);
   };
-
   const getAvatarGradientClass = () => {
-    const styles = [
-      "bg-gradient-to-r from-agent-blue to-agent-purple",
-      "bg-gradient-to-r from-agent-purple to-agent-light-purple",
-      "bg-gradient-to-r from-agent-light-purple to-agent-blue",
-      "bg-gradient-to-r from-agent-dark-blue to-agent-blue"
-    ];
-    
+    const styles = ["bg-gradient-to-r from-agent-blue to-agent-purple", "bg-gradient-to-r from-agent-purple to-agent-light-purple", "bg-gradient-to-r from-agent-light-purple to-agent-blue", "bg-gradient-to-r from-agent-dark-blue to-agent-blue"];
+
     // Use the first character of the full name as a simple hash
     const hash = formData.fullName ? formData.fullName.charCodeAt(0) % 4 : 0;
     return styles[hash];
   };
-
   const getSampleDialogueFlow = () => {
     if (!formData.fullName) return [];
-    
+
     // Return sample dialogue based on use case
     switch (formData.useCase) {
       case 'sales':
-        return [
-          { speaker: 'User', message: 'What products do you offer?' },
-          { speaker: 'Agent', message: `We offer a range of solutions designed to help businesses grow. Our most popular service is our AI-powered sales automation platform.` },
-          { speaker: 'User', message: 'How much does it cost?' },
-          { speaker: 'Agent', message: 'Our pricing is customized based on your specific needs. Would you like to schedule a demo to discuss your requirements?' }
-        ];
+        return [{
+          speaker: 'User',
+          message: 'What products do you offer?'
+        }, {
+          speaker: 'Agent',
+          message: `We offer a range of solutions designed to help businesses grow. Our most popular service is our AI-powered sales automation platform.`
+        }, {
+          speaker: 'User',
+          message: 'How much does it cost?'
+        }, {
+          speaker: 'Agent',
+          message: 'Our pricing is customized based on your specific needs. Would you like to schedule a demo to discuss your requirements?'
+        }];
       case 'customer-support':
-        return [
-          { speaker: 'User', message: "I'm having trouble with my account" },
-          { speaker: 'Agent', message: `I'm sorry to hear that. Let me help you resolve this issue. Could you please tell me more about what's happening?` },
-          { speaker: 'User', message: "I can't log in with my password" },
-          { speaker: 'Agent', message: 'I understand how frustrating that can be. Let me help you reset your password or would you like me to connect you with our support team?' }
-        ];
+        return [{
+          speaker: 'User',
+          message: "I'm having trouble with my account"
+        }, {
+          speaker: 'Agent',
+          message: `I'm sorry to hear that. Let me help you resolve this issue. Could you please tell me more about what's happening?`
+        }, {
+          speaker: 'User',
+          message: "I can't log in with my password"
+        }, {
+          speaker: 'Agent',
+          message: 'I understand how frustrating that can be. Let me help you reset your password or would you like me to connect you with our support team?'
+        }];
       default:
-        return [
-          { speaker: 'User', message: 'Tell me about your services' },
-          { speaker: 'Agent', message: `I'd be happy to tell you about what ${formData.fullName} offers. Our focus is on delivering exceptional value through our specialized services.` },
-          { speaker: 'User', message: 'How can we get started?' },
-          { speaker: 'Agent', message: 'Getting started is easy! Would you like to schedule a call to discuss your specific needs?' }
-        ];
+        return [{
+          speaker: 'User',
+          message: 'Tell me about your services'
+        }, {
+          speaker: 'Agent',
+          message: `I'd be happy to tell you about what ${formData.fullName} offers. Our focus is on delivering exceptional value through our specialized services.`
+        }, {
+          speaker: 'User',
+          message: 'How can we get started?'
+        }, {
+          speaker: 'Agent',
+          message: 'Getting started is easy! Would you like to schedule a call to discuss your specific needs?'
+        }];
     }
   };
-  
-  return (
-    <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
+  return <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
       <div className="mb-4">
-        <h3 className="text-lg font-medium">Agent Preview</h3>
-        <p className="text-sm text-gray-500">See how your AI agent will look and sound</p>
+        <h3 className="text-lg font-medium">Live Agent Preview</h3>
+        <p className="text-sm text-gray-500">See a sample response based on your current inputs. Updates automatically</p>
       </div>
       
       <div className="flex-1 flex flex-col">
@@ -120,9 +124,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
             <div className="flex items-center gap-2">
               <h4 className="font-medium">{formData.fullName || "AI Agent"}</h4>
               <Badge variant="outline" className="text-xs font-normal">
-                {formData.useCase === 'sales' ? 'Sales Agent' : 
-                 formData.useCase === 'customer-support' ? 'Support Agent' :
-                 formData.useCase === 'lead-qualification' ? 'Lead Qualifier' : 'Assistant'}
+                {formData.useCase === 'sales' ? 'Sales Agent' : formData.useCase === 'customer-support' ? 'Support Agent' : formData.useCase === 'lead-qualification' ? 'Lead Qualifier' : 'Assistant'}
               </Badge>
             </div>
             <p className="text-sm text-gray-500">
@@ -138,21 +140,17 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
           </div>
           
           {/* Sample dialogue flow */}
-          {formData.fullName && (
-            <div className="mt-6">
+          {formData.fullName && <div className="mt-6">
               <h5 className="text-sm font-medium mb-2">Sample Conversation Flow</h5>
               <div className="space-y-3">
-                {getSampleDialogueFlow().map((dialogue, index) => (
-                  <div key={index} className={`flex ${dialogue.speaker === 'User' ? 'justify-end' : 'justify-start'}`}>
+                {getSampleDialogueFlow().map((dialogue, index) => <div key={index} className={`flex ${dialogue.speaker === 'User' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] p-3 rounded-lg ${dialogue.speaker === 'User' ? 'bg-agent-blue/10 text-agent-blue' : 'bg-gray-50'}`}>
                       <p className="text-xs font-semibold mb-1">{dialogue.speaker}</p>
                       <p className="text-sm">{dialogue.message}</p>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
-            </div>
-          )}
+            </div>}
         </div>
         
         <div className="mt-auto">
@@ -175,8 +173,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ formData }) => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default PreviewPanel;

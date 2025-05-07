@@ -1,10 +1,8 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AgentForm, { FormData } from '@/components/AgentForm';
 import PreviewPanel from '@/components/PreviewPanel';
-
 const Index = () => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -12,15 +10,12 @@ const Index = () => {
     isCompany: false,
     url: '',
     useCase: 'sales',
-    voiceStyle: 'professional',
+    voiceStyle: 'professional'
   });
-
   const handleFormDataChange = (data: FormData) => {
     setFormData(data);
   };
-
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
+  return <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid -z-10"></div>
       <Header />
       
@@ -28,13 +23,9 @@ const Index = () => {
         <div className="container max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-block mb-2">
-              <span className="bg-agent-blue/10 text-agent-blue text-xs font-medium px-3 py-1 rounded-full">
-                AI-POWERED SALES AGENTS
-              </span>
+              <span className="bg-agent-blue/10 text-agent-blue text-xs font-medium px-3 py-1 rounded-full">AI-POWERED SALES AGENTS</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-agent-gradient animate-pulse-slow">
-              Create Your AI Sales Agent in 2 Minutes
-            </h1>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-agent-gradient animate-pulse-slow">Create Your Personalized Agent in 2 Minutes</h1>
             <p className="text-xl text-gray-700 max-w-2xl mx-auto">
               Paste your profile or website link — we'll do the rest.
             </p>
@@ -89,8 +80,6 @@ const Index = () => {
       </main>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
