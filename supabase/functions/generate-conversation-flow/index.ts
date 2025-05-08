@@ -27,7 +27,7 @@ serve(async (req) => {
     // Create system prompt based on template and scraped data
     const systemPrompt = generateSystemPrompt(profileData, useCase, name, isCompany, customPrompt);
     
-    // Generate conversation flow using OpenAI
+    // Generate conversation flow using Deepseek (with OpenAI fallback)
     const conversationFlow = await generateConversationFlowWithAI(
       systemPrompt, 
       profileData, 
@@ -174,45 +174,106 @@ Important: Make sure the conversation flow:
 6. Returns ONLY valid JSON that can be parsed (no explanations or other text)
 `;
 
-    const requestBody = {
+    // Try using Deepseek API first
+    if (DEEPSEEK_API_KEY) {
+      try {
+        console.log("Using Deepseek API for conversation flow generation");
+        
+        const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+              { role: "system", content: "You are an expert AI conversation designer who creates well-structured conversation flows." },
+              { role: "user", content: conversationFlowPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Deepseek API error:", errorText);
+          throw new Error(`Deepseek API error: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        const generatedContent = data.choices[0].message.content;
+        
+        // Parse the generated JSON content
+        try {
+          const parsedFlow = JSON.parse(generatedContent.trim());
+          console.log("Successfully generated conversation flow with Deepseek");
+          return parsedFlow;
+        } catch (error) {
+          console.error("Error parsing Deepseek generated conversation flow:", error);
+          throw new Error("Failed to parse Deepseek response");
+        }
+      } catch (deepseekError) {
+        console.error("Error with Deepseek API:", deepseekError);
+        // If Deepseek fails, fall back to OpenAI if available
+        if (OPENAI_API_KEY) {
+          console.log("Falling back to OpenAI API");
+          return await generateConversationFlowWithOpenAI(conversationFlowPrompt);
+        } else {
+          throw deepseekError; // Re-throw if no fallback available
+        }
+      }
+    } else if (OPENAI_API_KEY) {
+      // Use OpenAI if Deepseek key is not available
+      console.log("Deepseek API key not found, using OpenAI API");
+      return await generateConversationFlowWithOpenAI(conversationFlowPrompt);
+    } else {
+      // No API keys available
+      console.error("No API keys available for AI providers");
+      throw new Error("No API keys available for conversation flow generation");
+    }
+  } catch (error) {
+    console.error("Error generating conversation flow with AI:", error);
+    // Fallback to generate basic conversation flow
+    return generateBasicConversationFlow(systemPrompt, generateKnowledgeBase(profileData, isCompany), isCompany, useCase);
+  }
+}
+
+// Function to generate conversation flow with OpenAI
+async function generateConversationFlowWithOpenAI(conversationFlowPrompt: string) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
       model: "gpt-4o",
       messages: [
         { role: "system", content: "You are an expert AI conversation designer who creates well-structured conversation flows." },
         { role: "user", content: conversationFlowPrompt }
       ],
       temperature: 0.7
-    };
-    
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${errorText}`);
-    }
-    
-    const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
-    
-    // Parse the generated JSON content
-    try {
-      const parsedFlow = JSON.parse(generatedContent.trim());
-      return parsedFlow;
-    } catch (error) {
-      console.error("Error parsing generated conversation flow:", error);
-      // Fallback to generate basic conversation flow
-      return generateBasicConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
-    }
+    })
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${errorText}`);
+  }
+  
+  const data = await response.json();
+  const generatedContent = data.choices[0].message.content;
+  
+  // Parse the generated JSON content
+  try {
+    const parsedFlow = JSON.parse(generatedContent.trim());
+    console.log("Successfully generated conversation flow with OpenAI");
+    return parsedFlow;
   } catch (error) {
-    console.error("Error generating conversation flow with AI:", error);
-    // Fallback to generate basic conversation flow
-    return generateBasicConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
+    console.error("Error parsing OpenAI generated conversation flow:", error);
+    throw new Error("Failed to parse OpenAI response");
   }
 }
 
