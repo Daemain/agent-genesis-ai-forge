@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -118,11 +117,28 @@ async function simulateScraping(url: string, isCompany: boolean) {
   // LinkedIn actively blocks scraping, so you would need a specialized service
   
   if (isCompany) {
+    const companyName = url.includes('linkedin.com/company/') 
+      ? url.split('linkedin.com/company/')[1].split('/')[0].replace(/-/g, ' ') 
+      : 'Sample Company';
+    
     return {
       companyProfile: {
-        name: url.includes('linkedin.com/company/') 
-          ? url.split('linkedin.com/company/')[1].split('/')[0].replace(/-/g, ' ') 
-          : 'Sample Company',
+        company_name: companyName,
+        about_us: "This company was founded in 2010 and has been growing steadily since. They focus on delivering high-quality products to their customers and maintaining excellent customer relations.",
+        tagline: "A leading provider of innovative solutions in the industry.",
+        services_or_products: "Product A: A flagship product that does X\nService B: A premium service for Y",
+        target_audience: "Enterprise businesses and SMBs in the technology and finance sectors",
+        use_case: "Enterprise Solutions, Small Business Support",
+        voice_tone: "Professional, Insightful, Conversational", 
+        agent_greeting: `Hi there! I'm the AI assistant for ${companyName}. How can I help you today?`,
+        agent_intro: `I'm here to answer your questions about ${companyName}'s products and services, and help you determine if our solutions are a good fit for your business.`,
+        value_offer: `${companyName} helps businesses like yours streamline operations and increase productivity through our innovative solutions.`,
+        support_actions: "Product demos, pricing information, case studies, scheduling calls with representatives",
+        call_to_action: "Would you like to schedule a demo to see our products in action?"
+      },
+      // Keep original data for backward compatibility
+      originalData: {
+        name: companyName,
         tagline: "A leading provider of innovative solutions in the industry.",
         toneOfVoice: "Professional, Insightful, Conversational",
         about: "This company was founded in 2010 and has been growing steadily since. They focus on delivering high-quality products to their customers and maintaining excellent customer relations.",
@@ -149,11 +165,28 @@ async function simulateScraping(url: string, isCompany: boolean) {
       }
     };
   } else {
+    const individualName = url.includes('linkedin.com/in/') 
+      ? url.split('linkedin.com/in/')[1].split('/')[0].replace(/-/g, ' ') 
+      : 'John Doe';
+    
     return {
       individualProfile: {
-        name: url.includes('linkedin.com/in/') 
-          ? url.split('linkedin.com/in/')[1].split('/')[0].replace(/-/g, ' ') 
-          : 'John Doe',
+        full_name: individualName,
+        bio: "Experienced sales professional with over 5 years in the technology sector. Specializes in building strong client relationships and exceeding sales targets.",
+        profession_or_role: "Sales Professional",
+        services_or_offers: "Consultative Selling, Relationship Building, Client Management",
+        target_audience: "Business owners and decision-makers in the technology and SaaS industries",
+        use_case: "Sales Consulting, Business Development",
+        voice_tone: "Professional, Friendly, Knowledgeable", 
+        agent_greeting: `Hello! I'm ${individualName}'s AI assistant. How can I help you today?`,
+        agent_intro: `I can help answer questions about ${individualName}'s services and experience, and connect you with them if you're interested in working together.`,
+        value_offer: `${individualName} has a proven track record of helping clients achieve their business goals through tailored sales strategies.`,
+        support_actions: "Schedule consultations, share case studies, answer questions about services and expertise",
+        call_to_action: "Would you like to schedule a quick call to discuss how they can help your business?"
+      },
+      // Keep original data for backward compatibility
+      originalData: {
+        name: individualName,
         title: "Sales Professional",
         headline: "Sales Professional | Business Development | Relationship Management",
         toneOfVoice: "Professional, Friendly, Knowledgeable",
@@ -190,64 +223,88 @@ async function generateAgentContent(profileData: any, useCase: string, name: str
   
   // Generate system prompt based on the template and scraped data
   if (isCompany) {
-    // Company template
+    // Company template - use the new JSON format
     const companyProfile = profileData.companyProfile || {};
-    const companyName = companyProfile.name || name;
-    const industry = companyProfile.industriesServed?.[0] || "technology";
-    const tone = companyProfile.toneOfVoice || "professional, friendly, helpful";
+    const companyName = companyProfile.company_name || name;
     
-    systemPrompt = `You are an AI voice agent representing ${companyName}, a business that specializes in ${industry}.
+    systemPrompt = `You are an AI voice agent representing ${companyName}.
 
-Your goal is to introduce the company, explain its services/products, answer client inquiries, and direct people to the right resource.
+COMPANY INFORMATION:
+Company Name: ${companyProfile.company_name || companyName}
+About Us: ${companyProfile.about_us || "A leading provider of innovative solutions."}
+Tagline: ${companyProfile.tagline || "Innovative solutions for modern businesses."}
+Services/Products: ${companyProfile.services_or_products || "Various business solutions."}
+Target Audience: ${companyProfile.target_audience || "Businesses looking to improve their operations."}
+Use Case: ${companyProfile.use_case || useCase || "Sales and customer support."}
 
-Your tone is ${tone}, and you speak clearly and confidently about the company's:
-- Mission and values
-- Products or services
-- Client success stories
-- How to get started or speak to a real person
+CONVERSATION STYLE:
+Voice Tone: ${companyProfile.voice_tone || "Professional, friendly, and helpful."}
+Agent Greeting: ${companyProfile.agent_greeting || `Hi there! I'm the AI assistant for ${companyName}. How can I help you today?`}
+Agent Introduction: ${companyProfile.agent_intro || `I'm here to answer your questions about ${companyName}'s products and services.`}
+
+KEY MESSAGES:
+Value Offer: ${companyProfile.value_offer || `${companyName} provides innovative solutions to help businesses grow.`}
+Support Actions: ${companyProfile.support_actions || "Product information, pricing, scheduling demos."}
+Call to Action: ${companyProfile.call_to_action || "Would you like to learn more about our services?"}
 
 When uncertain, answer generally or offer to connect the user to support or sales.`;
 
-    // Generate knowledge base in JSON format
+    // Generate knowledge base in JSON format using the new structure
     knowledgeBase = {
-      company_name: companyName,
-      industry: industry,
-      summary: companyProfile.about || `${companyName} provides innovative solutions in the ${industry} industry.`,
-      products: companyProfile.productsServices?.map((p: any) => p.name) || ["Products and services"],
-      ideal_clients: companyProfile.industriesServed || ["Businesses"],
-      case_study: "We have helped numerous clients achieve their goals through our innovative solutions.",
-      website: companyProfile.contactInfo?.website || url,
-      contact: companyProfile.contactInfo?.email || "contact@example.com"
+      company_name: companyProfile.company_name || companyName,
+      about_us: companyProfile.about_us || "A leading provider of innovative solutions.",
+      tagline: companyProfile.tagline || "Innovative solutions for modern businesses.",
+      services_or_products: companyProfile.services_or_products || "Various business solutions.",
+      target_audience: companyProfile.target_audience || "Businesses looking to improve their operations.",
+      use_case: companyProfile.use_case || useCase || "Sales and customer support.",
+      voice_tone: companyProfile.voice_tone || "Professional, friendly, and helpful.",
+      agent_greeting: companyProfile.agent_greeting || `Hi there! I'm the AI assistant for ${companyName}. How can I help you today?`,
+      agent_intro: companyProfile.agent_intro || `I'm here to answer your questions about ${companyName}'s products and services.`,
+      value_offer: companyProfile.value_offer || `${companyName} provides innovative solutions to help businesses grow.`,
+      support_actions: companyProfile.support_actions || "Product information, pricing, scheduling demos.",
+      call_to_action: companyProfile.call_to_action || "Would you like to learn more about our services?"
     };
   } else {
-    // Individual template
+    // Individual template - use the new JSON format
     const individualProfile = profileData.individualProfile || {};
-    const fullName = individualProfile.name || name;
-    const profession = individualProfile.title || "Professional";
-    const skills = individualProfile.coreSkills || ["Professional skills"];
-    const tone = individualProfile.toneOfVoice || "friendly, professional";
+    const fullName = individualProfile.full_name || name;
     
-    systemPrompt = `You are an AI voice assistant representing ${fullName}, a ${profession} with expertise in ${skills.join(", ")}.
+    systemPrompt = `You are an AI voice assistant representing ${fullName}.
 
-Your goal is to explain their background, services, and value clearly and confidently. Your personality is ${tone}, and your responses should reflect ${fullName}'s tone, achievements, and personal brand.
+PERSONAL INFORMATION:
+Full Name: ${individualProfile.full_name || fullName}
+Bio: ${individualProfile.bio || "An experienced professional."}
+Profession/Role: ${individualProfile.profession_or_role || "Professional"}
+Services/Offers: ${individualProfile.services_or_offers || "Professional services"}
+Target Audience: ${individualProfile.target_audience || "Clients seeking professional services"}
+Use Case: ${individualProfile.use_case || useCase || "Professional representation"}
 
-You answer questions about ${fullName}'s:
-- Work experience
-- Skills and achievements
-- Projects or clients
-- Availability or how to get in touch
+CONVERSATION STYLE:
+Voice Tone: ${individualProfile.voice_tone || "Friendly, professional, and helpful"}
+Agent Greeting: ${individualProfile.agent_greeting || `Hello! I'm ${fullName}'s AI assistant. How can I help you today?`}
+Agent Introduction: ${individualProfile.agent_intro || `I can help answer questions about ${fullName}'s services and experience.`}
+
+KEY MESSAGES:
+Value Offer: ${individualProfile.value_offer || `${fullName} provides expert services to help clients succeed.`}
+Support Actions: ${individualProfile.support_actions || "Scheduling consultations, sharing information about services."}
+Call to Action: ${individualProfile.call_to_action || "Would you like to schedule a consultation?"}
 
 If the question is unrelated, respond politely or guide the person back to relevant topics. Offer to share links or book a meeting when appropriate.`;
 
-    // Generate knowledge base in JSON format
+    // Generate knowledge base in JSON format using the new structure
     knowledgeBase = {
-      name: fullName,
-      title: profession,
-      summary: individualProfile.about || `${fullName} is a ${profession} with expertise in ${skills.join(", ")}.`,
-      top_skills: skills,
-      clients: individualProfile.servicesOffered || ["Clients"],
-      portfolio_url: individualProfile.contact?.website || "personal-website.com",
-      contact: individualProfile.contact?.email || "contact@example.com"
+      full_name: individualProfile.full_name || fullName,
+      bio: individualProfile.bio || "An experienced professional.",
+      profession_or_role: individualProfile.profession_or_role || "Professional",
+      services_or_offers: individualProfile.services_or_offers || "Professional services",
+      target_audience: individualProfile.target_audience || "Clients seeking professional services",
+      use_case: individualProfile.use_case || useCase || "Professional representation",
+      voice_tone: individualProfile.voice_tone || "Friendly, professional, and helpful",
+      agent_greeting: individualProfile.agent_greeting || `Hello! I'm ${fullName}'s AI assistant. How can I help you today?`,
+      agent_intro: individualProfile.agent_intro || `I can help answer questions about ${fullName}'s services and experience.`,
+      value_offer: individualProfile.value_offer || `${fullName} provides expert services to help clients succeed.`,
+      support_actions: individualProfile.support_actions || "Scheduling consultations, sharing information about services.",
+      call_to_action: individualProfile.call_to_action || "Would you like to schedule a consultation?"
     };
   }
 

@@ -36,7 +36,7 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
-            <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg">
+            <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
               <AgentForm onFormDataChange={handleFormDataChange} />
             </div>
             
@@ -50,7 +50,7 @@ const Index = () => {
           </div>
           
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-agent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-blue font-semibold">1</span>
               </div>
@@ -60,7 +60,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-agent-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-purple font-semibold">2</span>
               </div>
@@ -70,7 +70,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-agent-light-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-light-purple font-semibold">3</span>
               </div>

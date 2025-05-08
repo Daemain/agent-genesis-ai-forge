@@ -122,8 +122,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
       // If name is empty, try to fill it from extracted data
       if (!formData.fullName) {
         const extractedName = formData.isCompany 
-          ? data.data.companyProfile?.name 
-          : data.data.individualProfile?.name;
+          ? data.data.companyProfile?.company_name || data.data.companyProfile?.originalData?.name
+          : data.data.individualProfile?.full_name || data.data.individualProfile?.originalData?.name;
         
         if (extractedName) {
           const newFormData = {
@@ -441,15 +441,15 @@ const AgentForm: React.FC<AgentFormProps> = ({
               <div className="text-xs max-h-40 overflow-y-auto">
                 {formData.isCompany ? (
                   <div>
-                    <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.name}</p>
-                    <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline}</p>
-                    <p><span className="font-medium">Products/Services:</span> {structuredData.companyProfile?.productsServices?.map((p: any) => p.name).join(', ')}</p>
+                    <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.company_name || structuredData.companyProfile?.originalData?.name}</p>
+                    <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline || structuredData.companyProfile?.originalData?.tagline}</p>
+                    <p><span className="font-medium">About:</span> {structuredData.companyProfile?.about_us || structuredData.companyProfile?.originalData?.about}</p>
                   </div>
                 ) : (
                   <div>
-                    <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.name}</p>
-                    <p><span className="font-medium">Title:</span> {structuredData.individualProfile?.title}</p>
-                    <p><span className="font-medium">Skills:</span> {structuredData.individualProfile?.coreSkills?.join(', ')}</p>
+                    <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.full_name || structuredData.individualProfile?.originalData?.name}</p>
+                    <p><span className="font-medium">Role:</span> {structuredData.individualProfile?.profession_or_role || structuredData.individualProfile?.originalData?.title}</p>
+                    <p><span className="font-medium">Bio:</span> {structuredData.individualProfile?.bio || structuredData.individualProfile?.originalData?.about}</p>
                   </div>
                 )}
               </div>

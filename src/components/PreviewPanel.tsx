@@ -20,22 +20,30 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
       voiceStyle
     } = formData;
     if (!fullName) return "Once you fill out the form, you'll see a preview of your AI agent here.";
-    const companyOrPerson = isCompany ? "your company" : "you";
-    let response = "";
-    switch (useCase) {
-      case 'sales':
-        response = `Hi there! I'm an AI sales assistant for ${fullName}. I can help qualify leads, schedule demos, and answer questions about our products and pricing.`;
-        break;
-      case 'customer-support':
-        response = `Hello! I'm ${fullName}'s customer support assistant. I can help troubleshoot issues, process returns, and handle general inquiries about our services.`;
-        break;
-      case 'lead-qualification':
-        response = `Hi! I'm ${fullName}'s lead qualification assistant. I can help identify potential customers, gather key information, and connect promising leads with the sales team.`;
-        break;
-      default:
-        response = `Hello! I'm an AI assistant for ${fullName}. I'm here to help with any questions you may have about ${companyOrPerson}.`;
+    
+    if (isCompany) {
+      switch (useCase) {
+        case 'sales':
+          return `Hi there! I'm an AI sales assistant for ${fullName}. I can help qualify leads, schedule demos, and answer questions about our products and pricing.`;
+        case 'customer-support':
+          return `Hello! I'm ${fullName}'s customer support assistant. I can help troubleshoot issues, process returns, and handle general inquiries about our services.`;
+        case 'lead-qualification':
+          return `Hi! I'm ${fullName}'s lead qualification assistant. I can help identify potential customers, gather key information, and connect promising leads with the sales team.`;
+        default:
+          return `Hello! I'm an AI assistant for ${fullName}. I'm here to help with any questions you may have about our company.`;
+      }
+    } else {
+      switch (useCase) {
+        case 'sales':
+          return `Hi there! I'm an AI sales assistant for ${fullName}. I can help answer questions about their services, schedule consultations, and provide information about their expertise.`;
+        case 'customer-support':
+          return `Hello! I'm ${fullName}'s customer support assistant. I can help address any concerns, answer questions about their services, and connect you directly when needed.`;
+        case 'lead-qualification':
+          return `Hi! I'm ${fullName}'s lead qualification assistant. I can help determine if their services are a good fit for your needs and schedule a personal consultation if appropriate.`;
+        default:
+          return `Hello! I'm an AI assistant for ${fullName}. I'm here to help with any questions you may have about their professional services and expertise.`;
+      }
     }
-    return response;
   };
 
   const getVoiceDescription = () => {
@@ -66,6 +74,19 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     return styles[hash];
   };
 
+  const getAgentTypeBadge = () => {
+    switch (formData.useCase) {
+      case 'sales':
+        return 'Sales Agent';
+      case 'customer-support':
+        return 'Support Agent';
+      case 'lead-qualification':
+        return 'Lead Qualifier';
+      default:
+        return 'Assistant';
+    }
+  };
+
   return <div className="bg-white rounded-xl shadow-lg p-6 h-full flex flex-col">
       <div className="mb-4">
         <h3 className="text-lg font-medium">Live Agent Preview</h3>
@@ -82,7 +103,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             <div className="flex items-center gap-2">
               <h4 className="font-medium">{formData.fullName || "AI Agent"}</h4>
               <Badge variant="outline" className="text-xs font-normal">
-                {formData.useCase === 'sales' ? 'Sales Agent' : formData.useCase === 'customer-support' ? 'Support Agent' : formData.useCase === 'lead-qualification' ? 'Lead Qualifier' : 'Assistant'}
+                {getAgentTypeBadge()}
               </Badge>
             </div>
             <p className="text-sm text-gray-500">
