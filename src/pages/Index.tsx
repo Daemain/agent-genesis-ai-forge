@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AgentForm, { FormData } from '@/components/AgentForm';
 import PreviewPanel from '@/components/PreviewPanel';
+
 const Index = () => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -12,9 +14,11 @@ const Index = () => {
     useCase: 'sales',
     voiceStyle: 'professional'
   });
+
   const handleFormDataChange = (data: FormData) => {
     setFormData(data);
   };
+
   return <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid -z-10"></div>
       <Header />
@@ -45,8 +49,8 @@ const Index = () => {
             <PreviewPanel formData={formData} />
           </div>
           
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-6 rounded-xl bg-white shadow-md">
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
               <div className="w-12 h-12 bg-agent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-blue font-semibold">1</span>
               </div>
@@ -56,7 +60,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="p-6 rounded-xl bg-white shadow-md">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
               <div className="w-12 h-12 bg-agent-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-purple font-semibold">2</span>
               </div>
@@ -66,7 +70,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="p-6 rounded-xl bg-white shadow-md">
+            <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all">
               <div className="w-12 h-12 bg-agent-light-purple/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-light-purple font-semibold">3</span>
               </div>
@@ -82,4 +86,5 @@ const Index = () => {
       <Footer />
     </div>;
 };
+
 export default Index;
