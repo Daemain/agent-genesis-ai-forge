@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AgentForm, { FormData } from '@/components/AgentForm';
-import PreviewPanel from '@/components/PreviewPanel';
 
 const Index = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -35,18 +34,8 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
-            <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <AgentForm onFormDataChange={handleFormDataChange} />
-            </div>
-            
-            <div className="hidden lg:block">
-              <PreviewPanel formData={formData} />
-            </div>
-          </div>
-          
-          <div className="lg:hidden mt-8">
-            <PreviewPanel formData={formData} />
+          <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <AgentForm onFormDataChange={handleFormDataChange} />
           </div>
           
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
