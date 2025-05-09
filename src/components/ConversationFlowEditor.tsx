@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -164,7 +163,7 @@ const ConversationFlowEditor: React.FC<ConversationFlowEditorProps> = ({
     setSelectedScenario(newIndex);
   };
 
-  const updateScenario = (index: number, field: keyof ConversationScenario, value: string | string[]) => {
+  const updateScenario = (index: number, field: keyof ConversationScenario, value: any) => {
     const newFlow = [...flow];
     
     if (field === 'scenario' || field === 'nextScenarioId' || field === 'conditions') {
