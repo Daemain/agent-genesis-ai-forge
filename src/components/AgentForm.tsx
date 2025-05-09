@@ -41,13 +41,14 @@ const AgentForm: React.FC<AgentFormProps> = ({
     email: '',
     isCompany: false,
     url: '',
-    useCase: '',
-    voiceStyle: ''
+    useCase: 'sales',  // Set default values here
+    voiceStyle: 'professional'  // Set default values here
   });
   const [structuredData, setStructuredData] = useState<any>(null);
   const [conversationFlow, setConversationFlow] = useState<ConversationScenario[]>([]);
   const [activeTab, setActiveTab] = useState<string>("details");
   const [flowGenerated, setFlowGenerated] = useState(false);
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const {
       name,
@@ -76,6 +77,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+  
   const extractProfileInformation = async () => {
     if (!formData.url) {
       toast({
