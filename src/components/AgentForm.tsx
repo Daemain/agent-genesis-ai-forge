@@ -41,14 +41,14 @@ const AgentForm: React.FC<AgentFormProps> = ({
     email: '',
     isCompany: false,
     url: '',
-    useCase: 'sales',  // Set default values here
-    voiceStyle: 'professional'  // Set default values here
+    useCase: 'sales',
+    // Set default values here
+    voiceStyle: 'professional' // Set default values here
   });
   const [structuredData, setStructuredData] = useState<any>(null);
   const [conversationFlow, setConversationFlow] = useState<ConversationScenario[]>([]);
   const [activeTab, setActiveTab] = useState<string>("details");
   const [flowGenerated, setFlowGenerated] = useState(false);
-  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const {
       name,
@@ -77,7 +77,6 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
-  
   const extractProfileInformation = async () => {
     if (!formData.url) {
       toast({
@@ -333,7 +332,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
         <TabsContent value="details" className="space-y-6 px-6 pb-6">
           <div className="mb-4">
             <div className="flex items-center space-x-2 mb-2">
-              <Label className="text-sm text-gray-500">I'm creating an agent for:</Label>
+              <Label className="text-sm text-gray-500 my-[16px]">I'm creating an agent for:</Label>
             </div>
             <div className="flex items-center space-x-3">
               <Label htmlFor="personal" className={`text-sm cursor-pointer px-3 py-1.5 rounded-md ${!formData.isCompany ? 'bg-gray-100 font-medium' : 'text-gray-500'}`}>
