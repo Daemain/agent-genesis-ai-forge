@@ -19,12 +19,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid -z-10"></div>
       <Header />
       
       <main className="flex-1 w-full px-4 md:px-8 py-12">
-        <div className="container max-w-5xl mx-auto">
+        <div className="container max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-block mb-2">
               <span className="bg-agent-blue/10 text-agent-blue text-xs font-medium px-3 py-1 rounded-full">AI-POWERED SALES AGENTS</span>
@@ -35,7 +35,7 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="glass-card p-8 md:p-12 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 max-w-4xl mx-auto">
+          <div className="glass-card rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 max-w-4xl mx-auto bg-white overflow-hidden">
             <AgentForm onFormDataChange={handleFormDataChange} />
           </div>
           
