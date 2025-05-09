@@ -18,12 +18,13 @@ const Index = () => {
     setFormData(data);
   };
 
-  return <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-radial from-white to-gray-50 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid -z-10"></div>
       <Header />
       
       <main className="flex-1 w-full px-4 md:px-8 py-12">
-        <div className="container max-w-7xl mx-auto">
+        <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-block mb-2">
               <span className="bg-agent-blue/10 text-agent-blue text-xs font-medium px-3 py-1 rounded-full">AI-POWERED SALES AGENTS</span>
@@ -34,11 +35,11 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="glass-card p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="glass-card p-8 md:p-12 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 max-w-4xl mx-auto">
             <AgentForm onFormDataChange={handleFormDataChange} />
           </div>
           
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center max-w-4xl mx-auto">
             <div className="p-6 rounded-xl bg-white/90 shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-agent-blue/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-agent-blue font-semibold">1</span>
@@ -73,7 +74,8 @@ const Index = () => {
       </main>
       
       <Footer />
-    </div>;
+    </div>
+  );
 };
 
 export default Index;

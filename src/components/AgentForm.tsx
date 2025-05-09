@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -329,28 +328,27 @@ const AgentForm: React.FC<AgentFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
       <Tabs 
         value={activeTab} 
         onValueChange={setActiveTab} 
         className="w-full"
       >
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="details">Agent Details</TabsTrigger>
-          <TabsTrigger value="flow" disabled={!structuredData}>Conversation Flow</TabsTrigger>
+        <TabsList className="grid grid-cols-2 mb-4 rounded-full p-1 w-full">
+          <TabsTrigger value="details" className="rounded-full px-6 py-2">Agent Details</TabsTrigger>
+          <TabsTrigger value="flow" disabled={!structuredData} className="rounded-full px-6 py-2">Conversation Flow</TabsTrigger>
         </TabsList>
         
         <TabsContent value="details" className="space-y-4">
-          {/* Move Personal/Company toggle to the top */}
           <div className="flex items-center space-x-2 mx-0">
-            <Label htmlFor="isCompany" className="text-sm cursor-pointer">Personal</Label>
-            <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
-            <Label htmlFor="isCompany" className="text-sm cursor-pointer">Company</Label>
+            <Label htmlFor="isCompany" className="text-md font-medium cursor-pointer">Personal</Label>
+            <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} className="bg-agent-purple" />
+            <Label htmlFor="isCompany" className="text-md font-medium cursor-pointer">Company</Label>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">
+              <Label htmlFor="fullName" className="text-md font-medium">
                 {formData.isCompany ? 'Company Name' : 'Full Name'}
               </Label>
               <Input 
@@ -359,24 +357,26 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
                 value={formData.fullName} 
                 onChange={handleInputChange} 
+                className="rounded-xl h-12"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-md font-medium">Email Address</Label>
               <Input 
                 id="email" 
                 name="email" 
                 type="email" 
                 placeholder="you@example.com" 
                 value={formData.email} 
-                onChange={handleInputChange} 
+                onChange={handleInputChange}
+                className="rounded-xl h-12"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="url">
+            <Label htmlFor="url" className="text-md font-medium">
               {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'}
             </Label>
             <div className="flex space-x-2">
@@ -386,14 +386,14 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
                 value={formData.url} 
                 onChange={handleInputChange}
-                className="flex-1"
+                className="flex-1 rounded-xl h-12"
               />
               <Button 
                 type="button" 
                 variant="outline"
                 onClick={extractProfileInformation}
                 disabled={!formData.url || isSubmitting}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap rounded-xl h-12"
               >
                 Extract Info
               </Button>
@@ -402,9 +402,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="useCase">Use Case</Label>
+              <Label htmlFor="useCase" className="text-md font-medium">Use Case</Label>
               <Select value={formData.useCase} onValueChange={value => handleSelectChange('useCase', value)}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-12">
                   <SelectValue placeholder="Select a use case" />
                 </SelectTrigger>
                 <SelectContent>
@@ -418,9 +418,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="voiceStyle">Voice Style</Label>
+              <Label htmlFor="voiceStyle" className="text-md font-medium">Voice Style</Label>
               <Select value={formData.voiceStyle} onValueChange={value => handleSelectChange('voiceStyle', value)}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-12">
                   <SelectValue placeholder="Select a voice style" />
                 </SelectTrigger>
                 <SelectContent>
@@ -436,17 +436,17 @@ const AgentForm: React.FC<AgentFormProps> = ({
           </div>
 
           {structuredData && (
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 mt-2">
-              <h4 className="text-sm font-medium mb-2">Extracted Profile Information</h4>
-              <div className="text-xs max-h-40 overflow-y-auto">
+            <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 mt-2">
+              <h4 className="text-lg font-medium mb-3">Extracted Profile Information</h4>
+              <div className="text-sm max-h-40 overflow-y-auto">
                 {formData.isCompany ? (
-                  <div>
+                  <div className="space-y-2">
                     <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.company_name || structuredData.companyProfile?.originalData?.name}</p>
                     <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline || structuredData.companyProfile?.originalData?.tagline}</p>
                     <p><span className="font-medium">About:</span> {structuredData.companyProfile?.about_us || structuredData.companyProfile?.originalData?.about}</p>
                   </div>
                 ) : (
-                  <div>
+                  <div className="space-y-2">
                     <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.full_name || structuredData.individualProfile?.originalData?.name}</p>
                     <p><span className="font-medium">Role:</span> {structuredData.individualProfile?.profession_or_role || structuredData.individualProfile?.originalData?.title}</p>
                     <p><span className="font-medium">Bio:</span> {structuredData.individualProfile?.bio || structuredData.individualProfile?.originalData?.about}</p>
@@ -458,9 +458,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 <Button 
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={() => generateConversationFlow()}
-                  className="mt-3"
+                  className="mt-4 rounded-xl"
                 >
                   Generate Conversation Flow
                 </Button>
@@ -468,10 +467,10 @@ const AgentForm: React.FC<AgentFormProps> = ({
             </div>
           )}
           
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button 
               type="submit" 
-              className="w-full bg-agent-gradient hover:opacity-90"
+              className="w-full bg-agent-gradient hover:opacity-90 rounded-xl py-6"
               disabled={isSubmitting || !structuredData}
             >
               {isSubmitting ? 'Generating...' : 'Generate My AI Agent'}
@@ -479,7 +478,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5" 
+              className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5 rounded-xl py-6" 
               onClick={handleDemoClick}
               disabled={isSubmitting}
             >
@@ -511,7 +510,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
               <div className="flex justify-end mt-4">
                 <Button
                   type="submit"
-                  className="bg-agent-gradient hover:opacity-90"
+                  className="bg-agent-gradient hover:opacity-90 rounded-xl py-6"
                   disabled={isSubmitting || conversationFlow.length === 0}
                 >
                   {isSubmitting ? 'Generating...' : 'Create AI Agent with Custom Flow'}
