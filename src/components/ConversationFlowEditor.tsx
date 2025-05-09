@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -166,10 +167,12 @@ const ConversationFlowEditor: React.FC<ConversationFlowEditorProps> = ({
   const updateScenario = (index: number, field: keyof ConversationScenario, value: any) => {
     const newFlow = [...flow];
     
-    if (field === 'scenario' || field === 'nextScenarioId' || field === 'conditions') {
-      newFlow[index][field] = value as string;
+    if (Array.isArray(value)) {
+      // Handle array values (userInputs, responses, followUps)
+      newFlow[index][field] = value as any;
     } else {
-      newFlow[index][field] = value as string[];
+      // Handle string values (scenario, nextScenarioId, conditions)
+      newFlow[index][field] = value as any;
     }
     
     setFlow(newFlow);
