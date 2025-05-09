@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ConversationFlowEditor from "@/components/ConversationFlowEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Mail, Link, ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
+import { HelpCircle, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 
@@ -336,91 +335,85 @@ const AgentForm: React.FC<AgentFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs 
         value={activeTab} 
         onValueChange={setActiveTab} 
         className="w-full"
       >
-        <TabsList className="grid grid-cols-2 mb-4 rounded-full p-1 w-full bg-gray-100">
-          <TabsTrigger value="details" className="rounded-full px-6 py-3 text-lg font-medium">Agent Details</TabsTrigger>
-          <TabsTrigger value="flow" disabled={!structuredData} className="rounded-full px-6 py-3 text-lg font-medium text-gray-500">Conversation Flow</TabsTrigger>
-        </TabsList>
+        <div className="px-6 pt-6">
+          <TabsList className="grid grid-cols-2 w-full bg-gray-100 rounded-lg">
+            <TabsTrigger value="details" className="rounded-md py-2.5">Agent Details</TabsTrigger>
+            <TabsTrigger value="flow" disabled={!structuredData} className="rounded-md py-2.5">Conversation Flow</TabsTrigger>
+          </TabsList>
+        </div>
         
-        <TabsContent value="details" className="space-y-7 bg-white rounded-3xl p-8 shadow-sm">
+        <TabsContent value="details" className="space-y-6 px-6 pb-6">
           <div className="mb-4">
-            <Label className="block text-sm font-medium text-gray-500 mb-2">I'm creating an agent for:</Label>
-            <div className="flex items-center space-x-4 bg-gray-50 rounded-full p-1 w-fit">
+            <div className="flex items-center space-x-2 mb-2">
+              <Label className="text-sm text-gray-500">I'm creating an agent for:</Label>
+            </div>
+            <div className="flex items-center space-x-3">
               <Label 
                 htmlFor="personal" 
-                className={`text-sm font-medium cursor-pointer rounded-full px-4 py-2 ${!formData.isCompany ? 'bg-white shadow-sm font-semibold' : 'text-gray-600'}`}
+                className={`text-sm cursor-pointer px-3 py-1.5 rounded-md ${!formData.isCompany ? 'bg-gray-100 font-medium' : 'text-gray-500'}`}
               >
                 Personal
               </Label>
-              <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} className="bg-agent-purple" />
+              <Switch id="isCompany" checked={formData.isCompany} onCheckedChange={handleToggleChange} />
               <Label 
                 htmlFor="company" 
-                className={`text-sm font-medium cursor-pointer rounded-full px-4 py-2 ${formData.isCompany ? 'bg-white shadow-sm font-semibold' : 'text-gray-600'}`}
+                className={`text-sm cursor-pointer px-3 py-1.5 rounded-md ${formData.isCompany ? 'bg-gray-100 font-medium' : 'text-gray-500'}`}
               >
                 Company
               </Label>
             </div>
           </div>
 
-          <div className="bg-gray-50 p-6 rounded-xl space-y-6">
-            <h3 className="font-semibold text-gray-700">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-semibold flex items-center">
-                  {formData.isCompany ? 'Company Name' : 'Full Name'} <span className="text-red-500 ml-1">*</span>
-                </Label>
-                <div className="relative">
-                  <Input 
-                    id="fullName" 
-                    name="fullName" 
-                    placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
-                    value={formData.fullName} 
-                    onChange={handleInputChange} 
-                    className="rounded-xl h-12 pl-4"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-semibold flex items-center">
-                  Email Address <span className="text-red-500 ml-1">*</span>
-                </Label>
-                <div className="relative">
-                  <Input 
-                    id="email" 
-                    name="email" 
-                    type="email" 
-                    placeholder="you@example.com" 
-                    value={formData.email} 
-                    onChange={handleInputChange}
-                    className="rounded-xl h-12 pl-4"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-6 rounded-xl space-y-6">
-            <h3 className="font-semibold text-gray-700">Profile Source</h3>
-            <div className="space-y-2">
-              <Label htmlFor="url" className="text-sm font-semibold flex items-center">
-                {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'} <span className="text-red-500 ml-1">*</span>
+          <div className="space-y-5">
+            <div>
+              <Label htmlFor="fullName" className="text-sm font-medium mb-1.5 block">
+                {formData.isCompany ? 'Company Name' : 'Full Name'} <span className="text-red-500">*</span>
               </Label>
-              <div className="flex gap-3 items-stretch">
+              <Input 
+                id="fullName" 
+                name="fullName" 
+                placeholder={formData.isCompany ? 'Acme Inc.' : 'John Smith'} 
+                value={formData.fullName} 
+                onChange={handleInputChange} 
+                className="h-10"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium mb-1.5 block">
+                Email Address <span className="text-red-500">*</span>
+              </Label>
+              <Input 
+                id="email" 
+                name="email" 
+                type="email" 
+                placeholder="you@example.com" 
+                value={formData.email} 
+                onChange={handleInputChange}
+                className="h-10"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="url" className="text-sm font-medium mb-1.5 block">
+                {formData.isCompany ? 'Company Website or Profile URL' : 'Personal Website or Profile URL'} <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex gap-3">
                 <Input 
                   id="url" 
                   name="url" 
                   placeholder={formData.isCompany ? 'https://yourcompany.com or LinkedIn URL' : 'https://yourwebsite.com or LinkedIn URL'} 
                   value={formData.url} 
                   onChange={handleInputChange}
-                  className="flex-1 rounded-xl h-12 pl-4"
+                  className="h-10"
                   required
                 />
                 <Button 
@@ -428,12 +421,12 @@ const AgentForm: React.FC<AgentFormProps> = ({
                   variant="outline"
                   onClick={extractProfileInformation}
                   disabled={!formData.url || isExtracting || isSubmitting}
-                  className="whitespace-nowrap rounded-xl h-12 px-4 text-base font-medium"
+                  className="whitespace-nowrap h-10"
                 >
                   {isExtracting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Analyzing...</span>
+                      <span>Analyzing</span>
                     </>
                   ) : (
                     "Extract Info"
@@ -441,25 +434,24 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 </Button>
               </div>
             </div>
-          </div>
 
-          <div className="bg-gray-50 p-6 rounded-xl space-y-6">
-            <h3 className="font-semibold text-gray-700">Agent Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Label htmlFor="useCase" className="text-sm font-semibold">Use Case</Label>
-                  <Tooltip delayDuration={300}>
+            <Separator className="my-2" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <Label htmlFor="useCase" className="text-sm font-medium">Use Case</Label>
+                  <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle size={14} className="text-gray-400" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Select how your AI agent will be used. This affects the tone and types of interactions it will be optimized for.</p>
+                    <TooltipContent>
+                      <p className="max-w-xs text-xs">Select how your AI agent will be used.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
                 <Select value={formData.useCase} onValueChange={value => handleSelectChange('useCase', value)}>
-                  <SelectTrigger className="rounded-xl h-12 text-base">
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select a use case" />
                   </SelectTrigger>
                   <SelectContent>
@@ -472,20 +464,21 @@ const AgentForm: React.FC<AgentFormProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Label htmlFor="voiceStyle" className="text-sm font-semibold">Voice Style</Label>
-                  <Tooltip delayDuration={300}>
+              
+              <div>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <Label htmlFor="voiceStyle" className="text-sm font-medium">Voice Style</Label>
+                  <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle size={14} className="text-gray-400" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Choose the personality and tone your AI agent will use when communicating with users.</p>
+                    <TooltipContent>
+                      <p className="max-w-xs text-xs">Choose the personality and tone your AI agent will use.</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
                 <Select value={formData.voiceStyle} onValueChange={value => handleSelectChange('voiceStyle', value)}>
-                  <SelectTrigger className="rounded-xl h-12 text-base">
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select a voice style" />
                   </SelectTrigger>
                   <SelectContent>
@@ -502,17 +495,17 @@ const AgentForm: React.FC<AgentFormProps> = ({
           </div>
 
           {structuredData && (
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-              <h4 className="text-lg font-semibold mb-4">Extracted Profile Information</h4>
-              <div className="text-base space-y-4">
+            <div className="mt-4 bg-gray-50 rounded-lg border border-gray-100 p-4">
+              <h4 className="text-sm font-semibold mb-3">Extracted Profile Information</h4>
+              <div className="text-sm space-y-3 text-gray-600">
                 {formData.isCompany ? (
-                  <div className="space-y-3">
+                  <div className="space-y-1.5">
                     <p><span className="font-medium">Company:</span> {structuredData.companyProfile?.company_name || structuredData.companyProfile?.originalData?.name}</p>
                     <p><span className="font-medium">Tagline:</span> {structuredData.companyProfile?.tagline || structuredData.companyProfile?.originalData?.tagline}</p>
                     <p><span className="font-medium">About:</span> {structuredData.companyProfile?.about_us || structuredData.companyProfile?.originalData?.about}</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-1.5">
                     <p><span className="font-medium">Name:</span> {structuredData.individualProfile?.full_name || structuredData.individualProfile?.originalData?.name}</p>
                     <p><span className="font-medium">Role:</span> {structuredData.individualProfile?.profession_or_role || structuredData.individualProfile?.originalData?.title}</p>
                     <p><span className="font-medium">Bio:</span> {structuredData.individualProfile?.bio || structuredData.individualProfile?.originalData?.about}</p>
@@ -524,17 +517,17 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => generateConversationFlow()}
-                className="mt-6 rounded-xl h-12 px-6 text-base font-medium"
+                className="mt-4 h-9 text-sm"
               >
                 Generate Conversation Flow
               </Button>
             </div>
           )}
           
-          <div className="pt-4 flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button 
               type="submit" 
-              className="w-full bg-agent-gradient hover:opacity-90 rounded-xl py-3 text-base font-medium shadow-sm hover:shadow-md transition-shadow"
+              className="w-full bg-agent-blue hover:bg-agent-blue/90 text-white"
               disabled={isSubmitting || !structuredData}
             >
               {isSubmitting ? (
@@ -549,7 +542,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full border-agent-blue text-agent-blue hover:bg-agent-blue/5 rounded-xl py-3 text-base font-medium transition-all" 
+              className="w-full border-gray-200 text-gray-700 hover:bg-gray-50"
               onClick={handleDemoClick}
               disabled={isSubmitting}
             >
@@ -558,11 +551,11 @@ const AgentForm: React.FC<AgentFormProps> = ({
           </div>
         </TabsContent>
         
-        <TabsContent value="flow">
+        <TabsContent value="flow" className="px-6 pb-6">
           {structuredData && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Customize Conversation Flow</h3>
+                <h3 className="text-base font-medium">Customize Conversation Flow</h3>
                 <div className="text-sm text-gray-500">
                   {flowGenerated ? "Flow generated successfully" : "Generate a flow to begin"}
                 </div>
@@ -572,8 +565,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 initialFlow={conversationFlow}
                 profileData={structuredData}
                 isCompany={formData.isCompany}
-                useCase={formData.useCase || 'sales'} // Provide default if empty
-                voiceStyle={formData.voiceStyle || 'professional'} // Provide default if empty
+                useCase={formData.useCase || 'sales'}
+                voiceStyle={formData.voiceStyle || 'professional'}
                 name={formData.fullName}
                 onSave={handleSaveConversationFlow}
               />
@@ -581,7 +574,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
               <div className="flex justify-end mt-4">
                 <Button
                   type="submit"
-                  className="bg-agent-gradient hover:opacity-90 rounded-xl py-6 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-agent-blue hover:bg-agent-blue/90 text-white"
                   disabled={isSubmitting || conversationFlow.length === 0}
                 >
                   {isSubmitting ? (
