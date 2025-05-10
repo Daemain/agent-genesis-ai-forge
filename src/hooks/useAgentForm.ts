@@ -34,6 +34,7 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
     };
   }, []);
 
+  // Handle form data changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newFormData = {
@@ -80,7 +81,7 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
         description: "Analyzing your profile data..."
       });
 
-      const { data, error } = await supabase.functions.invoke('extract-profile', {
+      const { data, error: apiError } = await supabase.functions.invoke('extract-profile', {
         body: {
           url: formData.url,
           isCompany: formData.isCompany,
@@ -89,12 +90,14 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
         }
       });
 
-      if (error) {
-        throw error;
+      if (apiError) {
+        console.error("Supabase function error:", apiError);
+        throw new Error(apiError.message || "Failed to extract profile information");
       }
 
-      if (!data.success) {
-        throw new Error(data.message || "Failed to extract profile information");
+      if (!data || !data.success) {
+        console.error("Function returned error:", data);
+        throw new Error(data?.message || "Failed to extract profile information");
       }
 
       setStructuredData(data.data);
@@ -123,10 +126,10 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
       console.log("Extracted data:", data.data);
     } catch (error) {
       console.error("Error extracting profile information:", error);
-      setError("Failed to extract profile information");
+      setError((error as Error).message || "Failed to extract profile information");
       toast({
         title: "Error",
-        description: "Failed to extract profile information. Please try again.",
+        description: `Failed to extract profile information: ${(error as Error).message || "Unknown error"}`,
         variant: "destructive"
       });
     } finally {
@@ -158,12 +161,11 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
       });
 
       // Create a safe, simplified copy of the data to send
-      // This helps avoid circular references and complex objects
       let safeDataToUse;
       try {
         // Use a more defensive approach to create safe data
         const dataString = JSON.stringify(dataToUse, (key, value) => {
-          // Filter out functions, undefined values, and circular references
+          // Filter out functions, undefined values
           if (typeof value === 'function' || value === undefined) {
             return undefined;
           }
@@ -190,18 +192,18 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
 
       console.log("Sending payload to generate-conversation-flow:", JSON.stringify(payload, null, 2));
 
-      const { data, error } = await supabase.functions.invoke('generate-conversation-flow', {
+      const { data, error: apiError } = await supabase.functions.invoke('generate-conversation-flow', {
         body: payload
       });
 
-      if (error) {
-        console.error("Supabase function error:", error);
-        throw error;
+      if (apiError) {
+        console.error("Supabase function error:", apiError);
+        throw new Error(apiError.message || "Failed to generate conversation flow");
       }
 
-      if (!data.success) {
+      if (!data || !data.success) {
         console.error("Function returned error:", data);
-        throw new Error(data.message || "Failed to generate conversation flow");
+        throw new Error(data?.message || "Failed to generate conversation flow");
       }
 
       console.log("Generated conversation flow response:", data);
@@ -220,7 +222,13 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
         // Try to parse if it's a string
         try {
           if (typeof data.data.conversationFlow === 'string') {
-            const parsedFlow = JSON.parse(data.data.conversationFlow);
+            // Clean the string from markdown artifacts if present
+            const cleanString = data.data.conversationFlow
+              .replace(/```json\n?/g, '')
+              .replace(/```\n?/g, '')
+              .trim();
+              
+            const parsedFlow = JSON.parse(cleanString);
             if (Array.isArray(parsedFlow)) {
               setConversationFlow(parsedFlow);
               setFlowGenerated(true);
@@ -236,7 +244,7 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
           throw new Error("Invalid conversation flow format");
         } catch (e) {
           console.error("Failed to parse conversation flow:", e);
-          throw new Error("Received malformed conversation flow data");
+          throw new Error("Received malformed conversation flow data. Please try again.");
         }
       } else {
         console.error("Invalid conversation flow data:", data.data);
@@ -244,11 +252,25 @@ export function useAgentForm(initialFormData: FormData, onFormDataChange: (formD
       }
     } catch (error) {
       console.error("Error generating conversation flow:", error);
-      setError("Failed to generate conversation flow: " + (error.message || "Unknown error"));
+      setError((error as Error).message || "Failed to generate conversation flow");
       toast({
         title: "Error",
-        description: "Failed to generate conversation flow. Please try again.",
+        description: `Failed to generate conversation flow: ${(error as Error).message || "Unknown error"}`,
         variant: "destructive"
+      });
+      
+      // Provide basic conversation flow as fallback in case of error
+      setConversationFlow([
+        {
+          scenario: "Default Greeting",
+          userInputs: ["Hello", "Hi there", "Hey"],
+          responses: [`Hi, I'm ${formData.fullName}'s AI assistant. How can I help you today?`],
+          followUps: ["Is there something specific you'd like to know?"]
+        }
+      ]);
+      toast({
+        title: "Fallback Used",
+        description: "Using basic conversation flow template due to error."
       });
     } finally {
       setIsGeneratingFlow(false);
