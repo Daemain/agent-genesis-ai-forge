@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +8,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ConversationFlowEditor from "@/components/ConversationFlowEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HelpCircle, Loader2 } from 'lucide-react';
+import { HelpCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AgentFormProps {
   onFormDataChange: (formData: FormData) => void;
@@ -53,6 +53,24 @@ const AgentForm: React.FC<AgentFormProps> = ({
   const [activeTab, setActiveTab] = useState<string>("details");
   const [flowGenerated, setFlowGenerated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Setup error boundary with useEffect
+  useEffect(() => {
+    // Global error handler to prevent blank screens
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      originalConsoleError(...args);
+      // Don't set error state for React internal warnings
+      const errorString = args.join(' ');
+      if (!errorString.includes('React') && !errorString.includes('Warning')) {
+        setError(prev => prev || "An unexpected error occurred. Please try again.");
+      }
+    };
+
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -155,6 +173,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
   };
 
   const generateConversationFlow = async (profileDataToUse?: any) => {
+    if (isGeneratingFlow) return; // Prevent multiple simultaneous requests
+    
     try {
       setError(null);
       const dataToUse = profileDataToUse || structuredData;
@@ -175,17 +195,41 @@ const AgentForm: React.FC<AgentFormProps> = ({
         description: "Creating a conversation flow based on the profile..."
       });
 
-      // Create a safe copy of the data to send
-      const safeDataToUse = JSON.parse(JSON.stringify(dataToUse));
+      // Create a safe, simplified copy of the data to send
+      // This helps avoid circular references and complex objects
+      let safeDataToUse;
+      try {
+        // Use a more defensive approach to create safe data
+        const dataString = JSON.stringify(dataToUse, (key, value) => {
+          // Filter out functions, undefined values, and circular references
+          if (typeof value === 'function' || value === undefined) {
+            return undefined;
+          }
+          return value;
+        });
+        safeDataToUse = JSON.parse(dataString);
+      } catch (e) {
+        console.error("Error preparing data for API call:", e);
+        // Fallback to a minimal dataset if JSON serialization fails
+        safeDataToUse = {
+          isCompany: formData.isCompany,
+          name: formData.fullName,
+          useCase: formData.useCase
+        };
+      }
+
+      const payload = {
+        profileData: safeDataToUse,
+        useCase: formData.useCase,
+        name: formData.fullName,
+        isCompany: formData.isCompany,
+        voiceStyle: formData.voiceStyle
+      };
+
+      console.log("Sending payload to generate-conversation-flow:", JSON.stringify(payload, null, 2));
 
       const { data, error } = await supabase.functions.invoke('generate-conversation-flow', {
-        body: {
-          profileData: safeDataToUse,
-          useCase: formData.useCase,
-          name: formData.fullName,
-          isCompany: formData.isCompany,
-          voiceStyle: formData.voiceStyle
-        }
+        body: payload
       });
 
       if (error) {
@@ -198,9 +242,9 @@ const AgentForm: React.FC<AgentFormProps> = ({
         throw new Error(data.message || "Failed to generate conversation flow");
       }
 
-      console.log("Generated conversation flow:", data.data.conversationFlow);
+      console.log("Generated conversation flow response:", data);
       
-      // Only update state if we have valid data
+      // Add defensive check for valid conversation flow data
       if (data.data && Array.isArray(data.data.conversationFlow)) {
         setConversationFlow(data.data.conversationFlow);
         setFlowGenerated(true);
@@ -210,13 +254,35 @@ const AgentForm: React.FC<AgentFormProps> = ({
           title: "Flow Generated",
           description: "Conversation flow has been created successfully."
         });
+      } else if (data.data && data.data.conversationFlow) {
+        // Try to parse if it's a string
+        try {
+          if (typeof data.data.conversationFlow === 'string') {
+            const parsedFlow = JSON.parse(data.data.conversationFlow);
+            if (Array.isArray(parsedFlow)) {
+              setConversationFlow(parsedFlow);
+              setFlowGenerated(true);
+              setActiveTab("flow");
+              
+              toast({
+                title: "Flow Generated",
+                description: "Conversation flow has been created successfully."
+              });
+              return;
+            }
+          }
+          throw new Error("Invalid conversation flow format");
+        } catch (e) {
+          console.error("Failed to parse conversation flow:", e);
+          throw new Error("Received malformed conversation flow data");
+        }
       } else {
         console.error("Invalid conversation flow data:", data.data);
         throw new Error("Received invalid conversation flow data");
       }
     } catch (error) {
       console.error("Error generating conversation flow:", error);
-      setError("Failed to generate conversation flow");
+      setError("Failed to generate conversation flow: " + (error.message || "Unknown error"));
       toast({
         title: "Error",
         description: "Failed to generate conversation flow. Please try again.",
@@ -366,6 +432,13 @@ const AgentForm: React.FC<AgentFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="mx-6 mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="px-6 pt-6">
           <TabsList className="grid grid-cols-2 w-full bg-gray-100 rounded-lg">

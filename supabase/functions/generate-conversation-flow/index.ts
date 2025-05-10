@@ -18,10 +18,37 @@ serve(async (req) => {
   }
 
   try {
-    const { profileData, useCase, name, isCompany, voiceStyle, customPrompt } = await req.json();
+    // Parse the request body with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error("Error parsing request JSON:", error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Invalid JSON in request body" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    const { profileData, useCase, name, isCompany, voiceStyle, customPrompt } = requestData;
     
     if (!profileData) {
-      throw new Error("Profile data is required");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Profile data is required" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // Create system prompt based on template and scraped data
@@ -92,10 +119,10 @@ When uncertain, answer generally or offer to connect the user to support or sale
     const individualProfile = profileData.individualProfile || {};
     const fullName = individualProfile.name || name;
     const profession = individualProfile.title || "Professional";
-    const skills = individualProfile.coreSkills || ["Professional skills"];
+    const skills = Array.isArray(individualProfile.coreSkills) ? individualProfile.coreSkills.join(", ") : "Professional skills";
     const tone = individualProfile.toneOfVoice || "friendly, professional";
     
-    return `You are an AI voice assistant representing ${fullName}, a ${profession} with expertise in ${skills.join(", ")}.
+    return `You are an AI voice assistant representing ${fullName}, a ${profession} with expertise in ${skills}.
 
 Your goal is to explain their background, services, and value clearly and confidently. Your personality is ${tone}, and your responses should reflect ${fullName}'s tone, achievements, and personal brand.
 
@@ -207,11 +234,14 @@ Important: Make sure the conversation flow:
         
         // Parse the generated JSON content
         try {
-          const parsedFlow = JSON.parse(generatedContent.trim());
+          // Clean up the response to remove markdown code blocks if present
+          const cleanContent = generatedContent.replace(/```json\n|\n```/g, '').trim();
+          const parsedFlow = JSON.parse(cleanContent);
           console.log("Successfully generated conversation flow with Deepseek");
           return parsedFlow;
         } catch (error) {
           console.error("Error parsing Deepseek generated conversation flow:", error);
+          console.error("Raw content:", generatedContent);
           throw new Error("Failed to parse Deepseek response");
         }
       } catch (deepseekError) {
@@ -221,7 +251,9 @@ Important: Make sure the conversation flow:
           console.log("Falling back to OpenAI API");
           return await generateConversationFlowWithOpenAI(conversationFlowPrompt);
         } else {
-          throw deepseekError; // Re-throw if no fallback available
+          // If no fallback available, use basic flow
+          console.log("No API fallback available, using basic flow");
+          return generateBasicConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
         }
       }
     } else if (OPENAI_API_KEY) {
@@ -229,9 +261,9 @@ Important: Make sure the conversation flow:
       console.log("Deepseek API key not found, using OpenAI API");
       return await generateConversationFlowWithOpenAI(conversationFlowPrompt);
     } else {
-      // No API keys available
-      console.error("No API keys available for AI providers");
-      throw new Error("No API keys available for conversation flow generation");
+      // No API keys available, use basic flow
+      console.log("No API keys available, using basic flow");
+      return generateBasicConversationFlow(systemPrompt, knowledgeBase, isCompany, useCase);
     }
   } catch (error) {
     console.error("Error generating conversation flow with AI:", error);
@@ -268,40 +300,55 @@ async function generateConversationFlowWithOpenAI(conversationFlowPrompt: string
   
   // Parse the generated JSON content
   try {
-    const parsedFlow = JSON.parse(generatedContent.trim());
+    // Clean up the response to remove markdown code blocks if present
+    const cleanContent = generatedContent.replace(/```json\n|\n```/g, '').trim();
+    const parsedFlow = JSON.parse(cleanContent);
     console.log("Successfully generated conversation flow with OpenAI");
     return parsedFlow;
   } catch (error) {
     console.error("Error parsing OpenAI generated conversation flow:", error);
+    console.error("Raw content:", generatedContent);
     throw new Error("Failed to parse OpenAI response");
   }
 }
 
 // Generate knowledge base in JSON format
 function generateKnowledgeBase(profileData: any, isCompany: boolean) {
-  if (isCompany) {
-    const companyProfile = profileData.companyProfile || {};
-    return {
-      company_name: companyProfile.name || "Company Name",
-      industry: companyProfile.industriesServed?.[0] || "Technology",
-      summary: companyProfile.about || "Company description",
-      products: companyProfile.productsServices?.map((p: any) => p.name) || ["Products and services"],
-      ideal_clients: companyProfile.industriesServed || ["Businesses"],
-      case_study: "We have helped numerous clients achieve their goals through our innovative solutions.",
-      website: companyProfile.contactInfo?.website || "company.com",
-      contact: companyProfile.contactInfo?.email || "contact@example.com"
-    };
-  } else {
-    const individualProfile = profileData.individualProfile || {};
-    return {
-      name: individualProfile.name || "Professional Name",
-      title: individualProfile.title || "Professional",
-      summary: individualProfile.about || "Professional description",
-      top_skills: individualProfile.coreSkills || ["Professional skills"],
-      clients: individualProfile.servicesOffered || ["Clients"],
-      portfolio_url: individualProfile.contact?.website || "personal-website.com",
-      contact: individualProfile.contact?.email || "contact@example.com"
-    };
+  try {
+    if (isCompany) {
+      const companyProfile = profileData.companyProfile || {};
+      return {
+        company_name: companyProfile.name || "Company Name",
+        industry: Array.isArray(companyProfile.industriesServed) ? companyProfile.industriesServed[0] : "Technology",
+        summary: companyProfile.about || "Company description",
+        products: Array.isArray(companyProfile.productsServices) ? 
+          companyProfile.productsServices.map((p: any) => p.name || "Product") : ["Products and services"],
+        ideal_clients: Array.isArray(companyProfile.industriesServed) ? 
+          companyProfile.industriesServed : ["Businesses"],
+        case_study: "We have helped numerous clients achieve their goals through our innovative solutions.",
+        website: companyProfile.contactInfo?.website || "company.com",
+        contact: companyProfile.contactInfo?.email || "contact@example.com"
+      };
+    } else {
+      const individualProfile = profileData.individualProfile || {};
+      return {
+        name: individualProfile.name || "Professional Name",
+        title: individualProfile.title || "Professional",
+        summary: individualProfile.about || "Professional description",
+        top_skills: Array.isArray(individualProfile.coreSkills) ? 
+          individualProfile.coreSkills : ["Professional skills"],
+        clients: Array.isArray(individualProfile.servicesOffered) ? 
+          individualProfile.servicesOffered : ["Clients"],
+        portfolio_url: individualProfile.contact?.website || "personal-website.com",
+        contact: individualProfile.contact?.email || "contact@example.com"
+      };
+    }
+  } catch (error) {
+    console.error("Error generating knowledge base:", error);
+    // Return minimal fallback knowledge base
+    return isCompany ? 
+      { company_name: "Company", industry: "Technology", summary: "A company that provides services." } : 
+      { name: "Professional", title: "Consultant", summary: "A professional offering services." };
   }
 }
 
