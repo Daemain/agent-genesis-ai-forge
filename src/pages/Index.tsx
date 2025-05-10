@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import AgentForm, { FormData } from '@/components/AgentForm';
+import AgentForm from '@/components/AgentForm';
+import { FormData } from '@/types/agent';
 
 const Index = () => {
   const [formData, setFormData] = useState<FormData>({

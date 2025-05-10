@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { FormData } from './AgentForm';
+import { FormData } from '@/types/agent';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Volume2, Mic, MessageCircle } from 'lucide-react';
