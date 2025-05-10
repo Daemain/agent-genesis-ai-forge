@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HelpCircle, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+
 interface AgentFormProps {
   onFormDataChange: (formData: FormData) => void;
 }
+
 export interface FormData {
   fullName: string;
   email: string;
@@ -22,38 +25,36 @@ export interface FormData {
   useCase: string;
   voiceStyle: string;
 }
+
 interface ConversationScenario {
   scenario: string;
   userInputs: string[];
   responses: string[];
   followUps: string[];
 }
+
 const AgentForm: React.FC<AgentFormProps> = ({
   onFormDataChange
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isGeneratingFlow, setIsGeneratingFlow] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
     isCompany: false,
     url: '',
     useCase: 'sales',
-    // Set default values here
-    voiceStyle: 'professional' // Set default values here
+    voiceStyle: 'professional'
   });
   const [structuredData, setStructuredData] = useState<any>(null);
   const [conversationFlow, setConversationFlow] = useState<ConversationScenario[]>([]);
   const [activeTab, setActiveTab] = useState<string>("details");
   const [flowGenerated, setFlowGenerated] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {
-      name,
-      value
-    } = e.target;
+    const { name, value } = e.target;
     const newFormData = {
       ...formData,
       [name]: value
@@ -61,6 +62,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+
   const handleSelectChange = (name: string, value: string) => {
     const newFormData = {
       ...formData,
@@ -69,6 +71,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+
   const handleToggleChange = (checked: boolean) => {
     const newFormData = {
       ...formData,
@@ -77,6 +80,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     setFormData(newFormData);
     onFormDataChange(newFormData);
   };
+
   const extractProfileInformation = async () => {
     if (!formData.url) {
       toast({
@@ -86,16 +90,15 @@ const AgentForm: React.FC<AgentFormProps> = ({
       });
       return;
     }
+
     try {
       setIsExtracting(true);
       toast({
         title: "Extracting Information",
         description: "Analyzing your profile data..."
       });
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('extract-profile', {
+
+      const { data, error } = await supabase.functions.invoke('extract-profile', {
         body: {
           url: formData.url,
           isCompany: formData.isCompany,
@@ -103,24 +106,23 @@ const AgentForm: React.FC<AgentFormProps> = ({
           email: formData.email
         }
       });
+
       if (error) {
         throw error;
       }
+
       if (!data.success) {
         throw new Error(data.message || "Failed to extract profile information");
       }
-      setStructuredData(data.data);
 
-      // Generate conversation flow after extracting profile
-      generateConversationFlow(data.data);
-      toast({
-        title: "Information Extracted",
-        description: "Profile data has been analyzed successfully."
-      });
+      setStructuredData(data.data);
 
       // If name is empty, try to fill it from extracted data
       if (!formData.fullName) {
-        const extractedName = formData.isCompany ? data.data.companyProfile?.company_name || data.data.companyProfile?.originalData?.name : data.data.individualProfile?.full_name || data.data.individualProfile?.originalData?.name;
+        const extractedName = formData.isCompany ? 
+          data.data.companyProfile?.company_name || data.data.companyProfile?.originalData?.name : 
+          data.data.individualProfile?.full_name || data.data.individualProfile?.originalData?.name;
+        
         if (extractedName) {
           const newFormData = {
             ...formData,
@@ -130,6 +132,12 @@ const AgentForm: React.FC<AgentFormProps> = ({
           onFormDataChange(newFormData);
         }
       }
+
+      toast({
+        title: "Information Extracted",
+        description: "Profile data has been analyzed successfully."
+      });
+
       console.log("Extracted data:", data.data);
     } catch (error) {
       console.error("Error extracting profile information:", error);
@@ -142,9 +150,11 @@ const AgentForm: React.FC<AgentFormProps> = ({
       setIsExtracting(false);
     }
   };
+
   const generateConversationFlow = async (profileDataToUse?: any) => {
     try {
       const dataToUse = profileDataToUse || structuredData;
+      
       if (!dataToUse) {
         toast({
           title: "Missing Information",
@@ -153,36 +163,50 @@ const AgentForm: React.FC<AgentFormProps> = ({
         });
         return;
       }
+
+      setIsGeneratingFlow(true);
+      
       toast({
         title: "Generating Flow",
         description: "Creating a conversation flow based on the profile..."
       });
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('generate-conversation-flow', {
+
+      const { data, error } = await supabase.functions.invoke('generate-conversation-flow', {
         body: {
           profileData: dataToUse,
-          useCase: formData.useCase || 'sales',
-          // Provide default value if empty
+          useCase: formData.useCase,
           name: formData.fullName,
           isCompany: formData.isCompany,
-          voiceStyle: formData.voiceStyle || 'professional' // Provide default value if empty
+          voiceStyle: formData.voiceStyle
         }
       });
+
       if (error) {
+        console.error("Supabase function error:", error);
         throw error;
       }
+
       if (!data.success) {
+        console.error("Function returned error:", data);
         throw new Error(data.message || "Failed to generate conversation flow");
       }
-      setConversationFlow(data.data.conversationFlow);
-      setFlowGenerated(true);
-      setActiveTab("flow");
-      toast({
-        title: "Flow Generated",
-        description: "Conversation flow has been created successfully."
-      });
+
+      console.log("Generated conversation flow:", data.data.conversationFlow);
+      
+      // Only update state if we have valid data
+      if (data.data && Array.isArray(data.data.conversationFlow)) {
+        setConversationFlow(data.data.conversationFlow);
+        setFlowGenerated(true);
+        setActiveTab("flow");
+        
+        toast({
+          title: "Flow Generated",
+          description: "Conversation flow has been created successfully."
+        });
+      } else {
+        console.error("Invalid conversation flow data:", data.data);
+        throw new Error("Received invalid conversation flow data");
+      }
     } catch (error) {
       console.error("Error generating conversation flow:", error);
       toast({
@@ -190,8 +214,11 @@ const AgentForm: React.FC<AgentFormProps> = ({
         description: "Failed to generate conversation flow. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsGeneratingFlow(false);
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -220,6 +247,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       });
       return;
     }
+
     try {
       setIsSubmitting(true);
       toast({
@@ -228,27 +256,23 @@ const AgentForm: React.FC<AgentFormProps> = ({
       });
 
       // Call the edge function to scrape the profile and create an agent
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('scrape-linkedin', {
+      const { data, error } = await supabase.functions.invoke('scrape-linkedin', {
         body: {
           name: formData.fullName,
           email: formData.email,
           isCompany: formData.isCompany,
           url: formData.url,
-          useCase: formData.useCase || 'sales',
-          // Provide default if empty
-          voiceStyle: formData.voiceStyle || 'professional',
-          // Provide default if empty
+          useCase: formData.useCase,
+          voiceStyle: formData.voiceStyle,
           structuredData: structuredData,
-          // Pass along any extracted structured data
-          conversationFlow: conversationFlow // Pass the customized conversation flow
+          conversationFlow: conversationFlow
         }
       });
+
       if (error) {
         throw error;
       }
+
       toast({
         title: "Success!",
         description: "Your AI agent has been created successfully."
@@ -265,6 +289,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       setIsSubmitting(false);
     }
   };
+
   const handleDemoClick = () => {
     const demoData = {
       fullName: 'Alex Johnson',
@@ -310,22 +335,23 @@ const AgentForm: React.FC<AgentFormProps> = ({
     };
     setStructuredData(demoStructuredData);
 
-    // Generate conversation flow with demo data
-    generateConversationFlow(demoStructuredData);
     toast({
       title: "Demo Agent Loaded",
       description: "We've loaded a sample AI agent for you to try."
     });
   };
+
   const handleSaveConversationFlow = (flow: ConversationScenario[]) => {
     setConversationFlow(flow);
   };
-  return <form onSubmit={handleSubmit} className="space-y-6">
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="px-6 pt-6">
           <TabsList className="grid grid-cols-2 w-full bg-gray-100 rounded-lg">
-            <TabsTrigger value="details" className="rounded-md py-1\n\n">Agent Details</TabsTrigger>
-            <TabsTrigger value="flow" disabled={!structuredData} className="rounded-md py-1\n">Conversation Flow</TabsTrigger>
+            <TabsTrigger value="details" className="rounded-md py-1">Agent Details</TabsTrigger>
+            <TabsTrigger value="flow" disabled={!structuredData} className="rounded-md py-1">Conversation Flow</TabsTrigger>
           </TabsList>
         </div>
         
@@ -448,8 +474,21 @@ const AgentForm: React.FC<AgentFormProps> = ({
                   </div>}
               </div>
               
-              <Button type="button" variant="outline" onClick={() => generateConversationFlow()} className="mt-4 h-9 text-sm">
-                Generate Conversation Flow
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => generateConversationFlow()} 
+                className="mt-4 h-9 text-sm"
+                disabled={isGeneratingFlow}
+              >
+                {isGeneratingFlow ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  "Generate Conversation Flow"
+                )}
               </Button>
             </div>}
           
@@ -475,7 +514,15 @@ const AgentForm: React.FC<AgentFormProps> = ({
                 </div>
               </div>
               
-              <ConversationFlowEditor initialFlow={conversationFlow} profileData={structuredData} isCompany={formData.isCompany} useCase={formData.useCase || 'sales'} voiceStyle={formData.voiceStyle || 'professional'} name={formData.fullName} onSave={handleSaveConversationFlow} />
+              <ConversationFlowEditor 
+                initialFlow={conversationFlow} 
+                profileData={structuredData} 
+                isCompany={formData.isCompany} 
+                useCase={formData.useCase} 
+                voiceStyle={formData.voiceStyle} 
+                name={formData.fullName} 
+                onSave={handleSaveConversationFlow} 
+              />
               
               <div className="flex justify-end mt-4">
                 <Button type="submit" className="bg-agent-blue hover:bg-agent-blue/90 text-white" disabled={isSubmitting || conversationFlow.length === 0}>
@@ -488,6 +535,8 @@ const AgentForm: React.FC<AgentFormProps> = ({
             </div>}
         </TabsContent>
       </Tabs>
-    </form>;
+    </form>
+  );
 };
+
 export default AgentForm;
