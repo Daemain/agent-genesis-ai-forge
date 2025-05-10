@@ -52,6 +52,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
   const [conversationFlow, setConversationFlow] = useState<ConversationScenario[]>([]);
   const [activeTab, setActiveTab] = useState<string>("details");
   const [flowGenerated, setFlowGenerated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -92,6 +93,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
     }
 
     try {
+      setError(null);
       setIsExtracting(true);
       toast({
         title: "Extracting Information",
@@ -141,6 +143,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       console.log("Extracted data:", data.data);
     } catch (error) {
       console.error("Error extracting profile information:", error);
+      setError("Failed to extract profile information");
       toast({
         title: "Error",
         description: "Failed to extract profile information. Please try again.",
@@ -153,6 +156,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
 
   const generateConversationFlow = async (profileDataToUse?: any) => {
     try {
+      setError(null);
       const dataToUse = profileDataToUse || structuredData;
       
       if (!dataToUse) {
@@ -171,9 +175,12 @@ const AgentForm: React.FC<AgentFormProps> = ({
         description: "Creating a conversation flow based on the profile..."
       });
 
+      // Create a safe copy of the data to send
+      const safeDataToUse = JSON.parse(JSON.stringify(dataToUse));
+
       const { data, error } = await supabase.functions.invoke('generate-conversation-flow', {
         body: {
-          profileData: dataToUse,
+          profileData: safeDataToUse,
           useCase: formData.useCase,
           name: formData.fullName,
           isCompany: formData.isCompany,
@@ -209,6 +216,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       }
     } catch (error) {
       console.error("Error generating conversation flow:", error);
+      setError("Failed to generate conversation flow");
       toast({
         title: "Error",
         description: "Failed to generate conversation flow. Please try again.",
@@ -249,24 +257,28 @@ const AgentForm: React.FC<AgentFormProps> = ({
     }
 
     try {
+      setError(null);
       setIsSubmitting(true);
       toast({
         title: "Agent Generation Started",
         description: "We're creating your AI sales agent now. This might take a minute or two."
       });
 
+      // Create a safe copy of the data to send
+      const safeDataToSend = {
+        name: formData.fullName,
+        email: formData.email,
+        isCompany: formData.isCompany,
+        url: formData.url,
+        useCase: formData.useCase,
+        voiceStyle: formData.voiceStyle,
+        structuredData: structuredData ? JSON.parse(JSON.stringify(structuredData)) : null,
+        conversationFlow: conversationFlow ? JSON.parse(JSON.stringify(conversationFlow)) : []
+      };
+
       // Call the edge function to scrape the profile and create an agent
       const { data, error } = await supabase.functions.invoke('scrape-linkedin', {
-        body: {
-          name: formData.fullName,
-          email: formData.email,
-          isCompany: formData.isCompany,
-          url: formData.url,
-          useCase: formData.useCase,
-          voiceStyle: formData.voiceStyle,
-          structuredData: structuredData,
-          conversationFlow: conversationFlow
-        }
+        body: safeDataToSend
       });
 
       if (error) {
@@ -280,6 +292,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       console.log("Agent created:", data);
     } catch (error) {
       console.error("Error creating agent:", error);
+      setError("Failed to create agent");
       toast({
         title: "Error",
         description: "There was a problem creating your AI agent. Please try again.",
@@ -334,6 +347,7 @@ const AgentForm: React.FC<AgentFormProps> = ({
       }
     };
     setStructuredData(demoStructuredData);
+    setError(null);
 
     toast({
       title: "Demo Agent Loaded",
@@ -344,6 +358,11 @@ const AgentForm: React.FC<AgentFormProps> = ({
   const handleSaveConversationFlow = (flow: ConversationScenario[]) => {
     setConversationFlow(flow);
   };
+
+  // If there's an error, show it
+  if (error) {
+    console.error("Error state:", error);
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
